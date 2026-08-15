@@ -1,0 +1,42 @@
+# Source data and reproducible generated artefacts
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+models/*
+!models/.gitkeep
+reports/figures/*
+!reports/figures/.gitkeep
+reports/tables/*
+!reports/tables/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+
+# Jupyter and IDE
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# OS and temporary files
+.DS_Store
+Thumbs.db
+tmp/
+*.log
+
+# Presentation outputs and personal details
+deliverables/*.pptx
+deliverables/*.pdf
+.env
+
+# Course-provided reference materials (kept locally, not versioned)
+CA6002 Assignment Brief*.pdf
+CA6002 Assignment_Group no - Template*.pptx
+CODEX_README.md

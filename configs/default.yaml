@@ -1,0 +1,18 @@
+project:
+  random_state: 42
+  max_rows: 250000
+
+data:
+  raw_path: data/raw/dft-road-casualty-statistics-collision-last-5-years.csv
+  date_column: date
+  time_column: time
+  target_column: collision_severity
+
+model:
+  task: binary_ksi  # binary_ksi: fatal/serious (1/2) vs slight (3)
+  test_year: 2025
+  validation_year: 2024
+  max_iter: 250
+  learning_rate: 0.08
+  max_leaf_nodes: 31
+  l2_regularization: 1.0
