@@ -1,0 +1,21 @@
+lightgbm:
+  max_iter: 400
+  learning_rate: 0.03
+  num_leaves: 63
+  min_child_samples: 20
+  max_depth: 6
+  l1_regularization: 1.0
+  l2_regularization: 5.0
+  feature_fraction: 1.0
+  bagging_fraction: 0.85
+metadata:
+  selected_by: mean_average_precision
+  validation_scheme: expanding_year
+  training_years:
+  - 2021
+  - 2022
+  - 2023
+  iterations: 20
+  random_state: 42
+  generated_at_utc: '2026-08-21T12:39:44.519694+00:00'
+  best_mean_average_precision: 0.3709264445977775

@@ -26,6 +26,14 @@ def main() -> None:
     parser.add_argument("--importance-rows", type=int, default=10000, help="Test rows used for permutation importance; 0 uses all.")
     args = parser.parse_args()
     config = yaml.safe_load(args.config.read_text(encoding="utf-8"))
+    best_params_path = ROOT / config["model"]["best_params_path"]
+    if not best_params_path.exists():
+        raise FileNotFoundError(
+            f"Best LightGBM parameters not found: {best_params_path}. "
+            "Run scripts/tune_lightgbm.py once first."
+        )
+    best_params = yaml.safe_load(best_params_path.read_text(encoding="utf-8"))["lightgbm"]
+    model_settings = {**config["model"], **best_params}
     frame = pd.read_csv(ROOT / config["data"]["processed_path"], low_memory=False, parse_dates=["date"])
     train, validation, test = temporal_split(frame, config["model"]["validation_year"], config["model"]["test_year"])
     X_train, y_train = build_features(train), make_target(train, config["model"]["task"])
@@ -34,11 +42,11 @@ def main() -> None:
 
     comparison = []
     fitted = {}
-    for kind in ["dummy", "logistic_regression", "hist_gradient_boosting"]:
-        model = make_pipeline(X_train, config["project"]["random_state"], config["model"], kind)
+    for kind in ["dummy", "logistic_regression", "lightgbm"]:
+        model = make_pipeline(X_train, config["project"]["random_state"], model_settings, kind)
         model.fit(X_train, y_train)
         metrics = evaluate(model, X_valid, y_valid)
-        comparison.append({"model": kind, "roc_auc": metrics["roc_auc"], "average_precision": metrics["average_precision"]})
+        comparison.append({"model": kind, "roc_auc": metrics["roc_auc"], "average_precision": metrics["average_precision"], "brier_score": metrics["brier_score"]})
         fitted[kind] = model
 
     comparison_frame = pd.DataFrame(comparison).sort_values("average_precision", ascending=False)

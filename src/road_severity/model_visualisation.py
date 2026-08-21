@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from sklearn.calibration import calibration_curve
-from sklearn.metrics import ConfusionMatrixDisplay, PrecisionRecallDisplay, RocCurveDisplay
+from sklearn.metrics import ConfusionMatrixDisplay, PrecisionRecallDisplay, RocCurveDisplay, precision_recall_curve
 
 
 def create_model_figures(model, X: pd.DataFrame, y: pd.Series, threshold: float, importance: pd.DataFrame, out_dir: str | Path) -> None:
@@ -35,6 +35,18 @@ def create_model_figures(model, X: pd.DataFrame, y: pd.Series, threshold: float,
     ConfusionMatrixDisplay.from_predictions(y, predictions, display_labels=["Slight", "KSI"], cmap="Blues", ax=ax, colorbar=False)
     ax.set_title(f"Confusion matrix at validation-selected threshold ({threshold:.2f})")
     fig.tight_layout(); fig.savefig(out_dir / "confusion_matrix.png", dpi=180, facecolor="white"); plt.close(fig)
+
+    precision, recall, thresholds = precision_recall_curve(y, probabilities)
+    threshold_frame = pd.DataFrame({"threshold": thresholds, "precision": precision[:-1], "recall": recall[:-1]})
+    denominator = threshold_frame["precision"] + threshold_frame["recall"]
+    threshold_frame["f1"] = (2 * threshold_frame["precision"] * threshold_frame["recall"] / denominator).fillna(0)
+    fig, ax = plt.subplots(figsize=(7, 5))
+    for metric, color in [("precision", "#4C78A8"), ("recall", "#E45756"), ("f1", "#59A14F")]:
+        ax.plot(threshold_frame["threshold"], threshold_frame[metric], label=metric.title(), color=color)
+    ax.axvline(threshold, linestyle="--", color="#777777", label=f"Selected threshold = {threshold:.2f}")
+    ax.set(title="Validation-selected decision threshold on the future test year", xlabel="Decision threshold", ylabel="Score", xlim=(0, 1), ylim=(0, 1))
+    ax.legend()
+    fig.tight_layout(); fig.savefig(out_dir / "threshold_metrics.png", dpi=180, facecolor="white"); plt.close(fig)
 
     observed, predicted = calibration_curve(y, probabilities, n_bins=10, strategy="quantile")
     fig, ax = plt.subplots(figsize=(6.5, 5))

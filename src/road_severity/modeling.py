@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import joblib
+from lightgbm import LGBMClassifier
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
@@ -13,10 +14,14 @@ from sklearn.impute import SimpleImputer
 from sklearn.inspection import permutation_importance
 from sklearn.dummy import DummyClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import average_precision_score, classification_report, f1_score, roc_auc_score
+from sklearn.metrics import (
+    average_precision_score, balanced_accuracy_score, brier_score_loss,
+    classification_report, confusion_matrix, f1_score, precision_score,
+    recall_score, roc_auc_score,
+)
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OrdinalEncoder
-from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.model_selection import ParameterSampler
 
 
 def temporal_split(frame: pd.DataFrame, validation_year: int, test_year: int):
@@ -29,7 +34,7 @@ def temporal_split(frame: pd.DataFrame, validation_year: int, test_year: int):
     return train, valid, test
 
 
-def make_pipeline(features: pd.DataFrame, random_state: int, settings: dict, model_kind: str = "hist_gradient_boosting") -> Pipeline:
+def make_pipeline(features: pd.DataFrame, random_state: int, settings: dict, model_kind: str = "lightgbm") -> Pipeline:
     numeric = features.select_dtypes(include="number").columns.tolist()
     categorical = [c for c in features.columns if c not in numeric]
     preprocessing = ColumnTransformer(
@@ -47,11 +52,18 @@ def make_pipeline(features: pd.DataFrame, random_state: int, settings: dict, mod
         estimator = DummyClassifier(strategy="prior", random_state=random_state)
     elif model_kind == "logistic_regression":
         estimator = LogisticRegression(max_iter=1000, solver="liblinear", class_weight="balanced", random_state=random_state)
-    elif model_kind == "hist_gradient_boosting":
-        estimator = HistGradientBoostingClassifier(
-            learning_rate=settings["learning_rate"], max_leaf_nodes=settings["max_leaf_nodes"],
-            l2_regularization=settings["l2_regularization"], max_iter=settings["max_iter"],
-            random_state=random_state,
+    elif model_kind == "lightgbm":
+        estimator = LGBMClassifier(
+            objective="binary", n_estimators=settings["max_iter"],
+            learning_rate=settings["learning_rate"], num_leaves=settings["num_leaves"],
+            reg_lambda=settings["l2_regularization"],
+            colsample_bytree=settings.get("feature_fraction", 1.0),
+            subsample=settings.get("bagging_fraction", 1.0),
+            subsample_freq=settings.get("bagging_freq", 0), class_weight="balanced",
+            min_child_samples=settings.get("min_child_samples", 20),
+            max_depth=settings.get("max_depth", -1),
+            reg_alpha=settings.get("l1_regularization", 0.0),
+            random_state=random_state, n_jobs=-1, verbosity=-1,
         )
     else:
         raise ValueError(f"Unknown model_kind: {model_kind}")
@@ -60,6 +72,50 @@ def make_pipeline(features: pd.DataFrame, random_state: int, settings: dict, mod
         ("preprocess", preprocessing),
         ("model", estimator),
     ])
+
+
+def tune_lightgbm(
+    features: pd.DataFrame,
+    target: pd.Series,
+    years: pd.Series,
+    base_settings: dict,
+    parameter_space: dict,
+    n_iter: int,
+    random_state: int,
+) -> tuple[dict, pd.DataFrame]:
+    """Tune once with expanding-year validation and return persisted-ready results."""
+    unique_years = sorted(pd.Series(years).dropna().unique().tolist())
+    if len(unique_years) < 2:
+        raise ValueError("LightGBM tuning requires at least two training years.")
+    folds = [
+        (years < validation_year, years == validation_year, int(validation_year))
+        for validation_year in unique_years[1:]
+    ]
+    rows = []
+    candidates = list(ParameterSampler(parameter_space, n_iter=n_iter, random_state=random_state))
+    for candidate_id, candidate in enumerate(candidates, start=1):
+        settings = {**base_settings, **candidate}
+        fold_scores = []
+        row = {"candidate": candidate_id, **candidate}
+        for train_mask, valid_mask, validation_year in folds:
+            model = make_pipeline(features.loc[train_mask], random_state, settings, "lightgbm")
+            model.fit(features.loc[train_mask], target.loc[train_mask])
+            probabilities = model.predict_proba(features.loc[valid_mask])[:, 1]
+            score = float(average_precision_score(target.loc[valid_mask], probabilities))
+            row[f"ap_{validation_year}"] = score
+            fold_scores.append(score)
+        row["mean_average_precision"] = float(np.mean(fold_scores))
+        row["std_average_precision"] = float(np.std(fold_scores))
+        rows.append(row)
+    results = pd.DataFrame(rows).sort_values(
+        ["mean_average_precision", "std_average_precision"], ascending=[False, True]
+    ).reset_index(drop=True)
+    best_keys = parameter_space.keys()
+    best_settings = {**base_settings, **{key: results.loc[0, key] for key in best_keys}}
+    for key, value in best_settings.items():
+        if isinstance(value, np.generic):
+            best_settings[key] = value.item()
+    return best_settings, results
 
 
 def select_threshold(y: pd.Series, probabilities: np.ndarray) -> float:
@@ -72,11 +128,18 @@ def select_threshold(y: pd.Series, probabilities: np.ndarray) -> float:
 def evaluate(model: Pipeline, X: pd.DataFrame, y: pd.Series, threshold: float = 0.5) -> dict:
     probabilities = model.predict_proba(X)[:, 1]
     predictions = (probabilities >= threshold).astype(int)
+    tn, fp, fn, tp = confusion_matrix(y, predictions, labels=[0, 1]).ravel()
     return {
         "threshold": float(threshold),
         "roc_auc": float(roc_auc_score(y, probabilities)),
         "average_precision": float(average_precision_score(y, probabilities)),
+        "brier_score": float(brier_score_loss(y, probabilities)),
         "prevalence": float(y.mean()),
+        "balanced_accuracy": float(balanced_accuracy_score(y, predictions)),
+        "ksi_precision": float(precision_score(y, predictions, zero_division=0)),
+        "ksi_recall": float(recall_score(y, predictions, zero_division=0)),
+        "ksi_f1": float(f1_score(y, predictions, zero_division=0)),
+        "confusion_matrix": {"tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp)},
         "classification_report": classification_report(y, predictions, output_dict=True, zero_division=0),
     }
 

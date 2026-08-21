@@ -16,5 +16,25 @@ model:
   validation_year: 2024
   max_iter: 250
   learning_rate: 0.08
-  max_leaf_nodes: 31
+  num_leaves: 31
   l2_regularization: 1.0
+  feature_fraction: 0.9
+  bagging_fraction: 0.9
+  bagging_freq: 1
+  min_child_samples: 20
+  max_depth: -1
+  l1_regularization: 0.0
+  best_params_path: configs/lightgbm_best_params.yaml
+
+tuning:
+  iterations: 20
+  parameter_space:
+    max_iter: [150, 250, 400, 600]
+    learning_rate: [0.03, 0.05, 0.08, 0.12]
+    num_leaves: [15, 31, 63, 127]
+    min_child_samples: [10, 20, 50, 100]
+    max_depth: [-1, 6, 10, 14]
+    l1_regularization: [0.0, 0.1, 0.5, 1.0]
+    l2_regularization: [0.0, 0.5, 1.0, 2.0, 5.0]
+    feature_fraction: [0.7, 0.85, 1.0]
+    bagging_fraction: [0.7, 0.85, 1.0]
