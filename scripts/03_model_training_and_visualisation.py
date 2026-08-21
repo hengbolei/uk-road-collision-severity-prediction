@@ -1,9 +1,10 @@
-"""Run Stage 3 model comparison, threshold selection, and held-out evaluation.
+'''
+Run Stage 3 model comparison, threshold selection, and held-out evaluation.
 
 The script loads persisted LightGBM parameters, compares them with baseline
 models on 2024, selects a validation-only threshold, evaluates once on 2025,
 and saves the chosen pipeline, metrics, importance, and diagnostic figures.
-"""
+'''
 
 from __future__ import annotations
 
@@ -26,7 +27,9 @@ from road_severity.modeling import evaluate, make_pipeline, select_threshold, te
 
 
 def main() -> None:
-    """Train candidate models and persist the validation-selected model's test outputs."""
+    '''
+    Train candidate models and persist the validation-selected model's test outputs.
+    '''
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=ROOT / "configs/default.yaml")
     parser.add_argument("--importance-rows", type=int, default=10000, help="Test rows used for permutation importance; 0 uses all.")

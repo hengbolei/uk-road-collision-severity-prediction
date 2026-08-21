@@ -1,9 +1,10 @@
-"""Build reusable audit tables for the raw-data analysis stage.
+'''
+Build reusable audit tables for the raw-data analysis stage.
 
 This module profiles raw and processed columns, records missingness and value
 ranges, and explains which fields are retained, transformed, or excluded from
 modelling because of identifiers, superseded definitions, or leakage risk.
-"""
+'''
 
 from __future__ import annotations
 
@@ -15,7 +16,9 @@ from road_severity.data import (
 )
 
 def raw_quality_table(frame: pd.DataFrame) -> pd.DataFrame:
-    """Summarise raw dtypes, missing values, sentinel values, and cardinality."""
+    '''
+    Summarise raw dtypes, missing values, sentinel values, and cardinality.
+    '''
     return pd.DataFrame({
         "dtype": frame.dtypes.astype(str),
         "missing_count": frame.isna().sum(),
@@ -28,7 +31,9 @@ def raw_quality_table(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def column_decisions_table(frame: pd.DataFrame, quality: pd.DataFrame, high_missing_threshold: float = 0.95) -> pd.DataFrame:
-    """Explain how each processed column should be treated without deleting it."""
+    '''
+    Explain how each processed column should be treated without deleting it.
+    '''
     quality_by_column = quality.set_index("column")
     rows = []
     for column in frame.columns:

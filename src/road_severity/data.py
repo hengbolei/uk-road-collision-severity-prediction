@@ -1,9 +1,10 @@
-"""Load, validate, clean, and transform DfT collision records.
+'''
+Load, validate, clean, and transform DfT collision records.
 
 This module enforces the schema and official code rules, resolves duplicates,
 harmonises fields across source formats, creates the KSI target, and constructs
 pre-collision model features while excluding identifiers and leakage fields.
-"""
+'''
 
 from __future__ import annotations
 
@@ -46,12 +47,16 @@ DEFAULT_MINUS_ONE_MEANING = ("missing_or_out_of_range", "Data missing or out of 
 
 
 def read_raw_collisions(path: str | Path) -> pd.DataFrame:
-    """Read the source exactly once without transforming values."""
+    '''
+    Read the source exactly once without transforming values.
+    '''
     return pd.read_csv(path, low_memory=False)
 
 
 def validate_schema_contract(frame: pd.DataFrame, contract: dict) -> pd.DataFrame:
-    """Check the named field groups required by the three-stage pipeline."""
+    '''
+    Check the named field groups required by the three-stage pipeline.
+    '''
     rows = []
     for group, columns in contract["required_columns"].items():
         missing = sorted(set(columns).difference(frame.columns))
@@ -64,7 +69,9 @@ def validate_schema_contract(frame: pd.DataFrame, contract: dict) -> pd.DataFram
 
 
 def resolve_duplicates(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Remove identical rows but retain and report conflicting duplicate IDs."""
+    '''
+    Remove identical rows but retain and report conflicting duplicate IDs.
+    '''
     exact_duplicate_mask = frame.duplicated(keep="first")
     without_exact = frame.loc[~exact_duplicate_mask].copy()
     conflict_mask = without_exact["collision_index"].duplicated(keep=False)
@@ -77,7 +84,9 @@ def resolve_duplicates(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame,
 
 
 def parse_temporal_fields(frame: pd.DataFrame) -> pd.DataFrame:
-    """Parse DfT day-first dates and 24-hour times after raw-data auditing."""
+    '''
+    Parse DfT day-first dates and 24-hour times after raw-data auditing.
+    '''
     frame = frame.copy()
     frame["date"] = pd.to_datetime(frame["date"], dayfirst=True, errors="coerce")
     frame["time"] = pd.to_datetime(frame["time"], format="%H:%M", errors="coerce")
@@ -85,7 +94,9 @@ def parse_temporal_fields(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def stratified_sample(frame: pd.DataFrame, max_rows: int | None, random_state: int = 42) -> pd.DataFrame:
-    """Sample reproducibly within year and severity so rare fatal records are retained."""
+    '''
+    Sample reproducibly within year and severity so rare fatal records are retained.
+    '''
     if max_rows and len(frame) > max_rows:
         strata = ["collision_year", "collision_severity"]
         shares = frame.groupby(strata, dropna=False).size() / len(frame)
@@ -100,12 +111,16 @@ def stratified_sample(frame: pd.DataFrame, max_rows: int | None, random_state: i
 
 
 def load_collisions(path: str | Path, max_rows: int | None = None, random_state: int = 42) -> pd.DataFrame:
-    """Compatibility loader: read, validate, parse, then stratify."""
+    '''
+    Compatibility loader: read, validate, parse, then stratify.
+    '''
     return stratified_sample(parse_temporal_fields(read_raw_collisions(path)), max_rows, random_state)
 
 
 def validate_collisions(frame: pd.DataFrame, contract: dict | None = None) -> pd.DataFrame:
-    """Return aggregated validation failures without silently deleting records."""
+    '''
+    Return aggregated validation failures without silently deleting records.
+    '''
     date = pd.to_datetime(frame["date"], dayfirst=True, errors="coerce")
     time = pd.to_datetime(frame["time"], format="%H:%M", errors="coerce")
     numeric = {column: pd.to_numeric(frame[column], errors="coerce") for column in [
@@ -157,7 +172,9 @@ def validate_collisions(frame: pd.DataFrame, contract: dict | None = None) -> pd
 
 
 def coded_missing_summary(frame: pd.DataFrame, contract: dict) -> pd.DataFrame:
-    """Count field-specific -1, 9 and 99 meanings defined by the official guide."""
+    '''
+    Count field-specific -1, 9 and 99 meanings defined by the official guide.
+    '''
     rows = []
     configured = set()
     for column, entries in contract.get("special_codes", {}).items():
@@ -181,7 +198,9 @@ def coded_missing_summary(frame: pd.DataFrame, contract: dict) -> pd.DataFrame:
 
 
 def missing_code_summary(frame: pd.DataFrame) -> pd.DataFrame:
-    """Backward-compatible -1-only summary used by older callers."""
+    '''
+    Backward-compatible -1-only summary used by older callers.
+    '''
     rows = []
     for column in frame.columns:
         count = int(frame[column].eq(-1).sum() if pd.api.types.is_numeric_dtype(frame[column]) else frame[column].eq("-1").sum())
@@ -192,7 +211,9 @@ def missing_code_summary(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def field_unification_summary(before: pd.DataFrame, after: pd.DataFrame) -> pd.DataFrame:
-    """Describe how much each explicit unified field recovered from retained sources."""
+    '''
+    Describe how much each explicit unified field recovered from retained sources.
+    '''
     pairs = {
         "junction_detail_unified": "junction_detail",
         "pedestrian_crossing_unified": "pedestrian_crossing",
@@ -217,7 +238,9 @@ def field_unification_summary(before: pd.DataFrame, after: pd.DataFrame) -> pd.D
 
 
 def make_target(frame: pd.DataFrame, task: str = "binary_ksi") -> pd.Series:
-    """Return a prediction target without exposing post-collision outcome fields."""
+    '''
+    Return a prediction target without exposing post-collision outcome fields.
+    '''
     severity = pd.to_numeric(frame["collision_severity"], errors="coerce")
     if task == "binary_ksi":
         # KSI is fatal (1) or serious (2); slight injury (3) is the reference class.
@@ -228,7 +251,9 @@ def make_target(frame: pd.DataFrame, task: str = "binary_ksi") -> pd.Series:
 
 
 def clean_collisions(frame: pd.DataFrame) -> pd.DataFrame:
-    """Return an analysis-ready copy while preserving the original coded fields."""
+    '''
+    Return an analysis-ready copy while preserving the original coded fields.
+    '''
     cleaned = frame.copy()
     # Prefer the already-converted 2024-format field, but recover an unambiguous
     # junction value from the retained historic field when the converted value is missing.
@@ -256,7 +281,9 @@ def clean_collisions(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_features(frame: pd.DataFrame) -> pd.DataFrame:
-    """Build pre-collision features, excluding IDs and outcome-derived leakage fields."""
+    '''
+    Build pre-collision features, excluding IDs and outcome-derived leakage fields.
+    '''
     features = frame.drop(
         columns=[
             "collision_severity", "ksi", "year_month",

@@ -1,9 +1,10 @@
-"""Run the explicitly invoked, one-off LightGBM hyperparameter search.
+'''
+Run the explicitly invoked, one-off LightGBM hyperparameter search.
 
 The script searches expanding-year folds within 2021-2023, ranks candidates by
 mean Average Precision, and persists both the winning parameters and complete
 search table for later Stage 3 runs without automatic retuning.
-"""
+'''
 
 from __future__ import annotations
 
@@ -23,7 +24,9 @@ from road_severity.modeling import temporal_split, tune_lightgbm
 
 
 def main() -> None:
-    """Execute one-off temporal tuning and save reproducible parameters and results."""
+    '''
+    Execute one-off temporal tuning and save reproducible parameters and results.
+    '''
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=ROOT / "configs/default.yaml")
     parser.add_argument("--iterations", type=int, help="Override the configured number of sampled candidates.")

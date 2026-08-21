@@ -1,9 +1,10 @@
-"""Build, tune, evaluate, and persist collision-severity classifiers.
+'''
+Build, tune, evaluate, and persist collision-severity classifiers.
 
 The module supplies leakage-aware preprocessing pipelines, expanding-year
 LightGBM tuning, validation-only threshold selection, held-out metrics, and
 serialisation helpers used by the Stage 3 scripts.
-"""
+'''
 
 from __future__ import annotations
 
@@ -30,7 +31,9 @@ from sklearn.model_selection import ParameterSampler
 
 
 def temporal_split(frame: pd.DataFrame, validation_year: int, test_year: int):
-    """Use past years for fitting and future years for honest validation/test evaluation."""
+    '''
+    Use past years for fitting and future years for honest validation/test evaluation.
+    '''
     train = frame[frame.collision_year < validation_year].copy()
     valid = frame[frame.collision_year == validation_year].copy()
     test = frame[frame.collision_year == test_year].copy()
@@ -40,7 +43,9 @@ def temporal_split(frame: pd.DataFrame, validation_year: int, test_year: int):
 
 
 def make_pipeline(features: pd.DataFrame, random_state: int, settings: dict, model_kind: str = "lightgbm") -> Pipeline:
-    """Create a fitted-ready preprocessing and classifier pipeline for one model kind."""
+    '''
+    Create a fitted-ready preprocessing and classifier pipeline for one model kind.
+    '''
     numeric = features.select_dtypes(include="number").columns.tolist()
     categorical = [c for c in features.columns if c not in numeric]
     preprocessing = ColumnTransformer(
@@ -89,7 +94,9 @@ def tune_lightgbm(
     n_iter: int,
     random_state: int,
 ) -> tuple[dict, pd.DataFrame]:
-    """Tune once with expanding-year validation and return persisted-ready results."""
+    '''
+    Tune once with expanding-year validation and return persisted-ready results.
+    '''
     unique_years = sorted(pd.Series(years).dropna().unique().tolist())
     if len(unique_years) < 2:
         raise ValueError("LightGBM tuning requires at least two training years.")
@@ -125,14 +132,18 @@ def tune_lightgbm(
 
 
 def select_threshold(y: pd.Series, probabilities: np.ndarray) -> float:
-    """Choose a validation threshold that maximises F1 for the minority KSI class."""
+    '''
+    Choose a validation threshold that maximises F1 for the minority KSI class.
+    '''
     candidates = np.linspace(0.05, 0.75, 141)
     scores = [f1_score(y, probabilities >= threshold) for threshold in candidates]
     return float(candidates[int(np.argmax(scores))])
 
 
 def evaluate(model: Pipeline, X: pd.DataFrame, y: pd.Series, threshold: float = 0.5) -> dict:
-    """Evaluate probability ranking, calibration, and thresholded KSI decisions."""
+    '''
+    Evaluate probability ranking, calibration, and thresholded KSI decisions.
+    '''
     probabilities = model.predict_proba(X)[:, 1]
     predictions = (probabilities >= threshold).astype(int)
     tn, fp, fn, tp = confusion_matrix(y, predictions, labels=[0, 1]).ravel()
@@ -152,7 +163,9 @@ def evaluate(model: Pipeline, X: pd.DataFrame, y: pd.Series, threshold: float = 
 
 
 def save_model_outputs(model: Pipeline, X_test: pd.DataFrame, y_test: pd.Series, out_dir: str | Path, threshold: float = 0.5) -> dict:
-    """Persist the trained pipeline, test metrics, and permutation importance for slides."""
+    '''
+    Persist the trained pipeline, test metrics, and permutation importance for slides.
+    '''
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     metrics = evaluate(model, X_test, y_test, threshold)

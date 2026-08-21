@@ -1,8 +1,9 @@
-"""Run Stage 2 descriptive analysis on the validated processed dataset.
+'''
+Run Stage 2 descriptive analysis on the validated processed dataset.
 
 The script verifies Stage 1 metadata, writes all KSI summary tables, rebuilds
 explanatory figures, and records a reporting-oriented figure catalogue.
-"""
+'''
 
 from __future__ import annotations
 
@@ -32,7 +33,9 @@ REQUIRED_PROCESSED_COLUMNS = {
 
 
 def validate_input(frame: pd.DataFrame, metadata: dict, contract: dict) -> pd.DataFrame:
-    """Check that processed data is complete, current, non-empty, and schema-compatible."""
+    '''
+    Check that processed data is complete, current, non-empty, and schema-compatible.
+    '''
     checks = [
         ("metadata_requires_full_data", metadata.get("sampling_strategy") == "full_data", metadata.get("sampling_strategy")),
         ("metadata_row_count_matches_file", metadata.get("processed_rows") == len(frame), f"metadata={metadata.get('processed_rows')}; actual={len(frame)}"),
@@ -44,7 +47,9 @@ def validate_input(frame: pd.DataFrame, metadata: dict, contract: dict) -> pd.Da
 
 
 def main() -> None:
-    """Validate Stage 2 inputs and regenerate processed-data tables and figures."""
+    '''
+    Validate Stage 2 inputs and regenerate processed-data tables and figures.
+    '''
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=ROOT / "configs/default.yaml")
     args = parser.parse_args()

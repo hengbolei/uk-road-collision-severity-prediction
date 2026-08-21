@@ -1,9 +1,10 @@
-"""Summarise validated collision data and create presentation-ready figures.
+'''
+Summarise validated collision data and create presentation-ready figures.
 
 This module builds KSI rate tables with uncertainty intervals, produces temporal,
 categorical, interaction, and spatial charts, and returns a catalogue of the most
 useful figures for reporting.
-"""
+'''
 
 from __future__ import annotations
 
@@ -42,7 +43,9 @@ LABELS = {
 
 
 def wilson_interval(successes: pd.Series | np.ndarray, totals: pd.Series | np.ndarray, z: float = 1.96) -> tuple[np.ndarray, np.ndarray]:
-    """Calculate Wilson confidence bounds for one or more observed proportions."""
+    '''
+    Calculate Wilson confidence bounds for one or more observed proportions.
+    '''
     successes = np.asarray(successes, dtype=float)
     totals = np.asarray(totals, dtype=float)
     p = np.divide(successes, totals, out=np.zeros_like(successes), where=totals > 0)
@@ -53,7 +56,9 @@ def wilson_interval(successes: pd.Series | np.ndarray, totals: pd.Series | np.nd
 
 
 def proportion_summary(frame: pd.DataFrame, column: str, labels: dict | None = None, unknown_codes: set | None = None) -> pd.DataFrame:
-    """Summarise collision counts, KSI shares, intervals, and data status by category."""
+    '''
+    Summarise collision counts, KSI shares, intervals, and data status by category.
+    '''
     summary = frame.groupby(column, dropna=False)["ksi"].agg(collisions="size", ksi_collisions="sum", ksi_rate="mean").reset_index()
     low, high = wilson_interval(summary["ksi_collisions"], summary["collisions"])
     summary["ci_low"] = low
@@ -70,7 +75,9 @@ def proportion_summary(frame: pd.DataFrame, column: str, labels: dict | None = N
 
 
 def build_all_tables(frame: pd.DataFrame) -> dict[str, pd.DataFrame]:
-    """Build every severity, time, road, and environment table used by Stage 2."""
+    '''
+    Build every severity, time, road, and environment table used by Stage 2.
+    '''
     severity = frame["collision_severity"].value_counts().sort_index().rename_axis("severity_code").reset_index(name="collisions")
     severity["severity"] = severity["severity_code"].map(LABELS["severity"])
     severity["share"] = severity["collisions"] / severity["collisions"].sum()
@@ -108,12 +115,16 @@ def build_all_tables(frame: pd.DataFrame) -> dict[str, pd.DataFrame]:
 
 
 def _style() -> None:
-    """Apply the shared colour-blind-safe visual theme to all generated figures."""
+    '''
+    Apply the shared colour-blind-safe visual theme to all generated figures.
+    '''
     sns.set_theme(style="whitegrid", palette="colorblind", font_scale=1.0)
 
 
 def _save(fig: plt.Figure, path: Path, footer: str | None = None) -> None:
-    """Lay out, annotate, save, and close a figure using consistent export settings."""
+    '''
+    Lay out, annotate, save, and close a figure using consistent export settings.
+    '''
     if footer:
         fig.text(0.01, 0.008, footer, ha="left", va="bottom", fontsize=8, color="#555555")
         fig.tight_layout(rect=(0, 0.035, 1, 1))
@@ -124,7 +135,9 @@ def _save(fig: plt.Figure, path: Path, footer: str | None = None) -> None:
 
 
 def plot_severity(summary: pd.DataFrame, path: Path) -> None:
-    """Plot the fatal, serious, and slight collision composition as a stacked bar."""
+    '''
+    Plot the fatal, serious, and slight collision composition as a stacked bar.
+    '''
     fig, ax = plt.subplots(figsize=(9, 3.2))
     left = 0.0
     colors = ["#7A0019", RED, BLUE]
@@ -150,7 +163,9 @@ def plot_severity(summary: pd.DataFrame, path: Path) -> None:
 
 
 def plot_annual(summary: pd.DataFrame, path: Path) -> None:
-    """Plot annual volume, recorded and adjusted KSI, and reporting-method trends."""
+    '''
+    Plot annual volume, recorded and adjusted KSI, and reporting-method trends.
+    '''
     fig, axes = plt.subplots(3, 1, figsize=(9, 9), sharex=True)
     axes[0].bar(summary["collision_year"], summary["collisions"], color=BLUE)
     axes[0].set(title="Recorded collision volume remained broadly stable", ylabel="Collisions")
@@ -174,7 +189,9 @@ def plot_annual(summary: pd.DataFrame, path: Path) -> None:
 
 
 def plot_hourly(summary: pd.DataFrame, path: Path) -> None:
-    """Compare hourly collision volume with hourly KSI share and uncertainty."""
+    '''
+    Compare hourly collision volume with hourly KSI share and uncertainty.
+    '''
     summary = summary.sort_values("hour")
     fig, axes = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
     axes[0].bar(summary["hour"], summary["collisions"], color=BLUE)
@@ -187,7 +204,9 @@ def plot_hourly(summary: pd.DataFrame, path: Path) -> None:
 
 
 def plot_proportion(summary: pd.DataFrame, path: Path, title: str, min_n: int = 100, include_unknown: bool = False) -> None:
-    """Plot category-level KSI shares after applying sample-size and status filters."""
+    '''
+    Plot category-level KSI shares after applying sample-size and status filters.
+    '''
     shown = summary[summary["collisions"].ge(min_n)].copy()
     if not include_unknown:
         shown = shown[shown["status"].eq("observed")]
@@ -206,7 +225,9 @@ def plot_proportion(summary: pd.DataFrame, path: Path, title: str, min_n: int = 
 
 
 def cross_summary(frame: pd.DataFrame, row: str, column: str, row_labels: dict, column_labels: dict, min_n: int = 100) -> pd.DataFrame:
-    """Build a labelled two-factor KSI summary for interaction heatmaps."""
+    '''
+    Build a labelled two-factor KSI summary for interaction heatmaps.
+    '''
     grouped = frame.groupby([row, column], dropna=False, observed=True)["ksi"].agg(collisions="size", ksi_collisions="sum", ksi_rate="mean").reset_index()
     grouped = grouped[grouped["collisions"].ge(min_n)].copy()
     grouped["row_label"] = grouped[row].map(row_labels).fillna(grouped[row].astype("string"))
@@ -215,7 +236,9 @@ def cross_summary(frame: pd.DataFrame, row: str, column: str, row_labels: dict, 
 
 
 def plot_heatmap(summary: pd.DataFrame, path: Path, title: str) -> None:
-    """Render a cross-summary as an annotated KSI-rate and sample-size heatmap."""
+    '''
+    Render a cross-summary as an annotated KSI-rate and sample-size heatmap.
+    '''
     rates = summary.pivot(index="row_label", columns="column_label", values="ksi_rate")
     counts = summary.pivot(index="row_label", columns="column_label", values="collisions")
     annotations = rates.copy().astype(object)
@@ -231,7 +254,9 @@ def plot_heatmap(summary: pd.DataFrame, path: Path, title: str) -> None:
 
 
 def plot_spatial_hex(frame: pd.DataFrame, path: Path, table_path: Path) -> None:
-    """Map collision density and sample-filtered KSI shares into spatial hexagons."""
+    '''
+    Map collision density and sample-filtered KSI shares into spatial hexagons.
+    '''
     geo = frame.dropna(subset=["longitude", "latitude", "ksi"])
     extent = [geo["longitude"].min(), geo["longitude"].max(), geo["latitude"].min(), geo["latitude"].max()]
     fig, axes = plt.subplots(1, 2, figsize=(10, 8), sharex=True, sharey=True)
@@ -266,7 +291,9 @@ def plot_spatial_hex(frame: pd.DataFrame, path: Path, table_path: Path) -> None:
 
 
 def create_all_figures(frame: pd.DataFrame, tables: dict[str, pd.DataFrame], figure_dir: Path, table_dir: Path) -> pd.DataFrame:
-    """Generate all Stage 2 figures and return their reporting-priority catalogue."""
+    '''
+    Generate all Stage 2 figures and return their reporting-priority catalogue.
+    '''
     _style()
     figure_dir.mkdir(parents=True, exist_ok=True)
     plot_severity(tables["severity_summary"], figure_dir / "01_severity_composition.png")

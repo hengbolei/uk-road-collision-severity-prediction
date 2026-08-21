@@ -1,4 +1,6 @@
-"""Verify data cleaning, schema enforcement, sampling, and leakage controls."""
+'''
+Verify data cleaning, schema enforcement, sampling, and leakage controls.
+'''
 
 import pandas as pd
 
@@ -10,7 +12,9 @@ from road_severity.data import (
 
 
 def test_features_remove_outcome_leakage_and_create_time_features():
-    """Ensure feature construction removes post-outcome data and derives time fields."""
+    '''
+    Ensure feature construction removes post-outcome data and derives time fields.
+    '''
     frame = pd.DataFrame({"collision_severity": [1, 3], "date": ["01/01/2025", "02/01/2025"], "time": ["08:30", "16:00"], "enhanced_severity_collision": [1, 3], "number_of_casualties": [2, 1], "did_police_officer_attend_scene_of_accident": [1, 2], "speed_limit": [30, 40]})
     features = build_features(frame)
     assert "enhanced_severity_collision" not in features
@@ -21,7 +25,9 @@ def test_features_remove_outcome_leakage_and_create_time_features():
 
 
 def test_clean_collisions_removes_duplicate_ids_and_replaces_sentinels():
-    """Ensure exact duplicate handling and coded-missing replacement remain stable."""
+    '''
+    Ensure exact duplicate handling and coded-missing replacement remain stable.
+    '''
     frame = pd.DataFrame({
         "collision_index": ["a", "a", "b"], "collision_severity": [1, 1, 3],
         "date": pd.to_datetime(["2025-01-01", "2025-01-01", "2025-02-01"]),
@@ -38,7 +44,9 @@ def test_clean_collisions_removes_duplicate_ids_and_replaces_sentinels():
 
 
 def test_clean_collisions_creates_unified_fields_and_recovers_junction():
-    """Ensure harmonised fields recover compatible historic junction information."""
+    '''
+    Ensure harmonised fields recover compatible historic junction information.
+    '''
     frame = pd.DataFrame({
         "collision_index": ["a", "b"], "collision_severity": [1, 3],
         "date": pd.to_datetime(["2025-01-01", "2025-02-01"]),
@@ -58,7 +66,9 @@ def test_clean_collisions_creates_unified_fields_and_recovers_junction():
 
 
 def test_stratified_sample_preserves_year_and_severity_strata():
-    """Ensure development sampling preserves year-by-severity composition."""
+    '''
+    Ensure development sampling preserves year-by-severity composition.
+    '''
     frame = pd.DataFrame({
         "collision_year": [2024] * 80 + [2025] * 20,
         "collision_severity": [3] * 60 + [2] * 20 + [3] * 15 + [2] * 5,
@@ -71,7 +81,9 @@ def test_stratified_sample_preserves_year_and_severity_strata():
 
 
 def test_validation_and_missing_code_meanings_are_reported():
-    """Ensure invalid values, duplicate conflicts, and special-code meanings are reported."""
+    '''
+    Ensure invalid values, duplicate conflicts, and special-code meanings are reported.
+    '''
     frame = pd.DataFrame({
         "collision_index": ["a", "a"], "collision_year": [2025, 2024],
         "collision_severity": [1, 8], "date": ["01/01/2025", "bad"],
@@ -96,7 +108,9 @@ def test_validation_and_missing_code_meanings_are_reported():
 
 
 def test_contract_and_allowed_codes_produce_error_level_issues():
-    """Ensure missing contract fields and unexpected codes produce blocking errors."""
+    '''
+    Ensure missing contract fields and unexpected codes produce blocking errors.
+    '''
     frame = pd.DataFrame({
         "collision_index": ["a"], "collision_year": [2025], "collision_severity": [1],
         "date": ["01/01/2025"], "time": ["08:30"], "number_of_vehicles": [1],

@@ -1,4 +1,6 @@
-"""Verify Stage 2 intervals, category handling, and reporting definitions."""
+'''
+Verify Stage 2 intervals, category handling, and reporting definitions.
+'''
 
 import numpy as np
 import pandas as pd
@@ -8,7 +10,9 @@ from road_severity.processed_analysis import build_all_tables, proportion_summar
 
 
 def test_wilson_interval_contains_observed_proportion():
-    """Ensure Wilson bounds contain the observed proportion for ordinary samples."""
+    '''
+    Ensure Wilson bounds contain the observed proportion for ordinary samples.
+    '''
     low, high = wilson_interval([20, 50], [100, 100])
     observed = np.array([0.2, 0.5])
     assert np.all(low < observed)
@@ -16,7 +20,9 @@ def test_wilson_interval_contains_observed_proportion():
 
 
 def test_proportion_summary_keeps_unknown_and_missing_but_marks_status():
-    """Ensure summaries retain unknown and missing groups with explicit statuses."""
+    '''
+    Ensure summaries retain unknown and missing groups with explicit statuses.
+    '''
     frame = pd.DataFrame({"category": [1, 1, 9, np.nan], "ksi": [1, 0, 1, 0]})
     summary = proportion_summary(frame, "category", {1: "Known", 9: "Unknown"}, {9})
     assert summary["collisions"].sum() == len(frame)
@@ -25,7 +31,9 @@ def test_proportion_summary_keeps_unknown_and_missing_but_marks_status():
 
 
 def test_annual_table_uses_recorded_and_adjusted_ksi_definitions():
-    """Ensure annual reporting distinguishes recorded, adjusted, and injury-based KSI."""
+    '''
+    Ensure annual reporting distinguishes recorded, adjusted, and injury-based KSI.
+    '''
     frame = pd.DataFrame({
         "collision_year": [2024, 2024, 2025, 2025],
         "collision_severity": [1, 3, 2, 3],
