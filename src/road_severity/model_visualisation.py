@@ -1,4 +1,8 @@
-"""Presentation-ready visual diagnostics for a fitted binary classifier."""
+"""Create presentation-ready diagnostics for a fitted binary classifier.
+
+This module converts held-out probabilities into PR, ROC, confusion-matrix,
+threshold, calibration, and permutation-importance figures.
+"""
 
 from __future__ import annotations
 
@@ -12,6 +16,7 @@ from sklearn.metrics import ConfusionMatrixDisplay, PrecisionRecallDisplay, RocC
 
 
 def create_model_figures(model, X: pd.DataFrame, y: pd.Series, threshold: float, importance: pd.DataFrame, out_dir: str | Path) -> None:
+    """Generate and save the complete held-out evaluation figure set for a model."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     sns.set_theme(style="whitegrid", palette="colorblind")

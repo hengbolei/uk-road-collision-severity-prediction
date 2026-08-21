@@ -1,4 +1,9 @@
-"""Part 1: audit the raw collision file and create an analysis-ready dataset."""
+"""Run Stage 1 raw-data auditing and produce the analysis-ready collision file.
+
+The script validates the DfT schema and values, resolves duplicates, records
+quality and provenance metadata, harmonises fields, and atomically writes the
+processed dataset only when error-level checks pass.
+"""
 
 from __future__ import annotations
 
@@ -24,6 +29,7 @@ from road_severity.data import (
 
 
 def main() -> None:
+    """Parse Stage 1 options, validate raw collisions, and write governed outputs."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=ROOT / "configs/default.yaml")
     parser.add_argument("--data", type=Path)

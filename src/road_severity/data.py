@@ -1,4 +1,9 @@
-"""Data loading, validation, and leakage-aware feature construction."""
+"""Load, validate, clean, and transform DfT collision records.
+
+This module enforces the schema and official code rules, resolves duplicates,
+harmonises fields across source formats, creates the KSI target, and constructs
+pre-collision model features while excluding identifiers and leakage fields.
+"""
 
 from __future__ import annotations
 

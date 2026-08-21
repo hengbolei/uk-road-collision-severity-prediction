@@ -1,4 +1,9 @@
-"""Model training and evaluation helpers."""
+"""Build, tune, evaluate, and persist collision-severity classifiers.
+
+The module supplies leakage-aware preprocessing pipelines, expanding-year
+LightGBM tuning, validation-only threshold selection, held-out metrics, and
+serialisation helpers used by the Stage 3 scripts.
+"""
 
 from __future__ import annotations
 
@@ -35,6 +40,7 @@ def temporal_split(frame: pd.DataFrame, validation_year: int, test_year: int):
 
 
 def make_pipeline(features: pd.DataFrame, random_state: int, settings: dict, model_kind: str = "lightgbm") -> Pipeline:
+    """Create a fitted-ready preprocessing and classifier pipeline for one model kind."""
     numeric = features.select_dtypes(include="number").columns.tolist()
     categorical = [c for c in features.columns if c not in numeric]
     preprocessing = ColumnTransformer(
@@ -126,6 +132,7 @@ def select_threshold(y: pd.Series, probabilities: np.ndarray) -> float:
 
 
 def evaluate(model: Pipeline, X: pd.DataFrame, y: pd.Series, threshold: float = 0.5) -> dict:
+    """Evaluate probability ranking, calibration, and thresholded KSI decisions."""
     probabilities = model.predict_proba(X)[:, 1]
     predictions = (probabilities >= threshold).astype(int)
     tn, fp, fn, tp = confusion_matrix(y, predictions, labels=[0, 1]).ravel()

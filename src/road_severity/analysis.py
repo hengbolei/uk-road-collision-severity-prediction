@@ -1,4 +1,9 @@
-"""Reusable audit tables for the raw-data analysis stage."""
+"""Build reusable audit tables for the raw-data analysis stage.
+
+This module profiles raw and processed columns, records missingness and value
+ranges, and explains which fields are retained, transformed, or excluded from
+modelling because of identifiers, superseded definitions, or leakage risk.
+"""
 
 from __future__ import annotations
 

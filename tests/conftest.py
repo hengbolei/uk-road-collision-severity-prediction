@@ -1,3 +1,5 @@
+"""Configure test imports so the local ``road_severity`` package is exercised."""
+
 import sys
 from pathlib import Path
 
