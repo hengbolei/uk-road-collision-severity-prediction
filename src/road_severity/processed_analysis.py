@@ -12,18 +12,21 @@ from pathlib import Path
 
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
-from matplotlib.ticker import PercentFormatter
+from matplotlib.ticker import LinearLocator, PercentFormatter
 import numpy as np
 import pandas as pd
 import seaborn as sns
 
-BLUE = "#4C78A8"
-RED = "#E45756"
-GREEN = "#59A14F"
-PURPLE = "#B279A2"
-GREY = "#9D9D9D"
+ACCENT = "#39728C"
+ACCENT_DARK = "#27566B"
+ORANGE = "#C4773B"
+HEAT_RED = "#B5524B"
+GREY = "#B8BDC2"
+DARK_GREY = "#555B61"
+GRID_GREY = "#E5E7E9"
 KSI_AXIS_MAX = 0.40
 SPATIAL_MIN_COLLISIONS = 200
+SOURCE = "Source: UK Department for Transport road collision data, 2021-2025."
 
 LABELS = {
     "severity": {1: "Fatal", 2: "Serious", 3: "Slight"},
@@ -118,111 +121,158 @@ def _style() -> None:
     '''
     Apply the shared colour-blind-safe visual theme to all generated figures.
     '''
-    sns.set_theme(style="whitegrid", palette="colorblind", font_scale=1.0)
+    sns.set_theme(style="whitegrid", font_scale=1.0, rc={
+        "axes.edgecolor": DARK_GREY, "axes.linewidth": 0.8,
+        "axes.spines.top": False, "axes.spines.right": False,
+        "grid.color": GRID_GREY, "grid.linewidth": 0.7,
+        "axes.titleweight": "normal", "figure.facecolor": "white",
+    })
 
 
-def _save(fig: plt.Figure, path: Path, footer: str | None = None) -> None:
+def _save(fig: plt.Figure, path: Path, footer: str | None = None, apply_tight_layout: bool = True) -> None:
     '''
     Lay out, annotate, save, and close a figure using consistent export settings.
     '''
+    footer = f"{footer}  {SOURCE}" if footer else SOURCE
     if footer:
-        fig.text(0.01, 0.008, footer, ha="left", va="bottom", fontsize=8, color="#555555")
-        fig.tight_layout(rect=(0, 0.035, 1, 1))
+        fig.text(0.01, 0.008, footer, ha="left", va="bottom", fontsize=8, color=DARK_GREY)
+    if apply_tight_layout:
+        fig.tight_layout(rect=(0, 0.035, 1, 1) if footer else None)
     else:
-        fig.tight_layout()
+        fig.subplots_adjust(left=0.08, right=0.94, bottom=0.08, top=0.92)
     fig.savefig(path, dpi=180, bbox_inches="tight", facecolor="white")
     plt.close(fig)
 
 
 def plot_severity(summary: pd.DataFrame, path: Path) -> None:
-    '''
-    Plot the fatal, serious, and slight collision composition as a stacked bar.
-    '''
+    '''Plot severity composition using direct labels and one KSI accent hue.'''
     fig, ax = plt.subplots(figsize=(9, 3.2))
     left = 0.0
-    colors = ["#7A0019", RED, BLUE]
-    for row, color in zip(summary.itertuples(), colors):
-        ax.barh([0], [row.share], left=left, color=color, height=0.5)
+    styles = [(ACCENT, "///"), (ACCENT, None), (GREY, None)]
+    for row, (color, hatch) in zip(summary.itertuples(), styles):
+        ax.barh([0], [row.share], left=left, color=color, height=0.5, hatch=hatch)
         label = f"{row.severity}\n{row.share:.1%}\n(n={row.collisions:,})"
         if row.share < 0.05:
-            ax.annotate(
-                label,
-                xy=(left + row.share / 2, 0.24),
-                xytext=(left + 0.035, 0.60),
-                ha="left",
-                va="bottom",
-                fontsize=8,
-                arrowprops={"arrowstyle": "-", "color": "#555555", "linewidth": 0.8},
-            )
+            ax.annotate(label, xy=(left + row.share / 2, 0.24), xytext=(left + 0.035, 0.60),
+                        ha="left", va="bottom", fontsize=8,
+                        arrowprops={"arrowstyle": "-", "color": DARK_GREY, "linewidth": 0.8})
         else:
-            ax.text(left + row.share / 2, 0, label, ha="center", va="center", color="white", fontsize=9)
+            text_color = "white" if row.severity != "Slight" else "#222222"
+            ax.text(left + row.share / 2, 0, label, ha="center", va="center", color=text_color, fontsize=9)
         left += row.share
-    ax.set(xlim=(0, 1), ylim=(-0.45, 0.95), yticks=[], xlabel="Share of reported collisions", title="Three in four reported collisions were recorded as slight")
+    ax.set(xlim=(0, 1), ylim=(-0.45, 0.95), yticks=[], xlabel="Share of reported collisions (%)",
+           title="Three in four reported collisions were recorded as slight")
     ax.xaxis.set_major_formatter(PercentFormatter(1))
+    ax.grid(axis="y", visible=False)
     _save(fig, path, "Denominator: reported personal-injury collisions, 2021-2025.")
 
-
 def plot_annual(summary: pd.DataFrame, path: Path) -> None:
-    '''
-    Plot annual volume, recorded and adjusted KSI, and reporting-method trends.
-    '''
-    fig, axes = plt.subplots(3, 1, figsize=(9, 9), sharex=True)
-    axes[0].bar(summary["collision_year"], summary["collisions"], color=BLUE)
-    axes[0].set(title="Recorded collision volume remained broadly stable", ylabel="Collisions")
-    axes[0].set_ylim(0, summary["collisions"].max() * 1.15)
-    for row in summary.itertuples():
-        axes[0].text(row.collision_year, row.collisions + 1200, f"{row.collisions:,}", ha="center", fontsize=8)
+    '''Combine annual collision volume and reporting-method trends on one time axis.'''
+    fig, ax = plt.subplots(figsize=(9, 5.5))
+    peak_index = summary["collisions"].idxmax()
+    ax.bar(
+        summary["collision_year"], summary["collisions"], width=0.62,
+        color=[ACCENT if index == peak_index else GREY for index in summary.index],
+    )
+    ax.set(
+        title="Collision volume stayed stable while injury-based reporting expanded",
+        xlabel="Year", ylabel="Reported collisions",
+        ylim=(0, 120_000),
+    )
+    ax.set_xticks(summary["collision_year"])
+    ax.yaxis.set_major_locator(LinearLocator(5))
+    peak = summary.loc[peak_index]
+    ax.annotate(
+        f"{int(peak['collisions']):,}",
+        (peak["collision_year"], peak["collisions"]), xytext=(0, 6),
+        textcoords="offset points", ha="center", va="bottom", fontsize=9, color=ACCENT_DARK,
+    )
+    ax.grid(axis="x", visible=False)
+    ax.grid(axis="y", visible=True)
 
-    axes[1].plot(summary["collision_year"], summary["ksi_rate"], marker="o", color=RED, label="Recorded KSI")
-    axes[1].fill_between(summary["collision_year"], summary["ksi_ci_low"], summary["ksi_ci_high"], color=RED, alpha=0.15)
-    axes[1].plot(summary["collision_year"], summary["adjusted_ksi_rate"], marker="s", color=PURPLE, label="Severity-adjusted KSI")
-    axes[1].set(title="KSI share rose under both recorded and adjusted definitions", ylabel="KSI share", ylim=(0, 0.32))
-    axes[1].yaxis.set_major_formatter(PercentFormatter(1))
-    axes[1].legend(frameon=False, ncol=2)
-
-    axes[2].plot(summary["collision_year"], summary["injury_based_share"], marker="o", color=GREEN)
-    axes[2].fill_between(summary["collision_year"], summary["injury_based_ci_low"], summary["injury_based_ci_high"], color=GREEN, alpha=0.15)
-    axes[2].set(title="Injury-based severity reporting expanded sharply in 2025", ylabel="Injury-based share", xlabel="Year", ylim=(0, 1))
-    axes[2].yaxis.set_major_formatter(PercentFormatter(1))
-    axes[2].set_xticks(summary["collision_year"])
-    _save(fig, path, "Adjusted KSI = fatal indicator + DfT adjusted probability of serious severity. Shading: 95% Wilson CI where applicable.")
-
+    rate_ax = ax.twinx()
+    rate_ax.plot(summary["collision_year"], summary["injury_based_share"], marker="o", color=ORANGE, linewidth=2.2)
+    rate_ax.fill_between(
+        summary["collision_year"], summary["injury_based_ci_low"], summary["injury_based_ci_high"],
+        color=ORANGE, alpha=0.12,
+    )
+    rate_ax.set(ylabel="Injury-based severity reporting (%)", ylim=(0, 1))
+    rate_ax.yaxis.set_major_locator(LinearLocator(5))
+    rate_ax.yaxis.set_major_formatter(PercentFormatter(1))
+    rate_ax.grid(False)
+    rate_ax.spines["right"].set_visible(True)
+    rate_ax.spines["right"].set_color(ORANGE)
+    rate_ax.tick_params(axis="y", colors=ORANGE)
+    rate_ax.yaxis.label.set_color(ORANGE)
+    last = summary.iloc[-1]
+    rate_ax.annotate(
+        f"Injury-based reporting {last['injury_based_share']:.1%}",
+        (last["collision_year"], last["injury_based_share"]), xytext=(0, 12),
+        textcoords="offset points", ha="center", va="bottom", fontsize=9, color=ORANGE,
+        annotation_clip=False,
+    )
+    _save(fig, path, "Bars: annual reported collisions. Line and shading: injury-based reporting share and 95% Wilson CI.")
 
 def plot_hourly(summary: pd.DataFrame, path: Path) -> None:
-    '''
-    Compare hourly collision volume with hourly KSI share and uncertainty.
-    '''
+    '''Combine hourly collision volume and KSI share on one time axis.'''
     summary = summary.sort_values("hour")
-    fig, axes = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
-    axes[0].bar(summary["hour"], summary["collisions"], color=BLUE)
-    axes[0].set(title="Collision volume peaks during afternoon travel", ylabel="Collisions")
-    axes[1].plot(summary["hour"], summary["ksi_rate"], marker="o", color=RED)
-    axes[1].fill_between(summary["hour"], summary["ci_low"], summary["ci_high"], color=RED, alpha=0.15)
-    axes[1].set(title="KSI share is highest overnight, when collision volume is lower", ylabel="KSI share", xlabel="Hour", ylim=(0, KSI_AXIS_MAX), xticks=range(0, 24, 2))
-    axes[1].yaxis.set_major_formatter(PercentFormatter(1))
+    fig, ax = plt.subplots(figsize=(10, 5.7))
+    peak_hour = summary.loc[summary["collisions"].idxmax(), "hour"]
+    ax.bar(summary["hour"], summary["collisions"], color=[DARK_GREY if hour == peak_hour else GREY for hour in summary["hour"]], width=0.78)
+    ax.set(
+        title="Collision volume peaks in the afternoon, but severity peaks overnight",
+        xlabel="Hour of day", ylabel="Reported collisions", xticks=range(0, 24, 2),
+        ylim=(0, 48_000),
+    )
+    ax.yaxis.set_major_locator(LinearLocator(5))
+    ax.grid(axis="x", visible=False)
+    ax.grid(axis="y", visible=True)
+
+    rate_ax = ax.twinx()
+    rate_ax.plot(summary["hour"], summary["ksi_rate"], marker="o", markersize=4, color=ACCENT, linewidth=2.1)
+    rate_ax.fill_between(summary["hour"], summary["ci_low"], summary["ci_high"], color=ACCENT, alpha=0.12)
+    rate_ax.set(ylabel="KSI collisions (% of reported collisions)", ylim=(0, KSI_AXIS_MAX))
+    rate_ax.yaxis.set_major_locator(LinearLocator(5))
+    rate_ax.yaxis.set_major_formatter(PercentFormatter(1))
+    rate_ax.grid(False)
+    rate_ax.spines["right"].set_visible(True)
+    rate_ax.spines["right"].set_color(ACCENT)
+    rate_ax.tick_params(axis="y", colors=ACCENT)
+    rate_ax.yaxis.label.set_color(ACCENT)
+    peak_ksi = summary.loc[summary["ksi_rate"].idxmax()]
+    rate_ax.annotate(
+        f"Highest KSI share\n{int(peak_ksi['hour']):02d}:00  {peak_ksi['ksi_rate']:.1%}",
+        (peak_ksi["hour"], peak_ksi["ksi_rate"]), xytext=(10, 8),
+        textcoords="offset points", fontsize=9, color=ACCENT_DARK,
+    )
     _save(fig, path, "Denominator: reported collisions in each hour. Shading: 95% Wilson CI; this is not exposure-normalised risk.")
 
-
 def plot_proportion(summary: pd.DataFrame, path: Path, title: str, min_n: int = 100, include_unknown: bool = False) -> None:
-    '''
-    Plot category-level KSI shares after applying sample-size and status filters.
-    '''
+    '''Plot category KSI shares; ordered categories retain their natural order.'''
     shown = summary[summary["collisions"].ge(min_n)].copy()
     if not include_unknown:
         shown = shown[shown["status"].eq("observed")]
-    shown = shown.sort_values("ksi_rate")
+    labels = set(shown["label"].astype(str))
+    natural_orders = [list(LABELS["month"].values()), list(LABELS["weekday"].values()), ["20", "30", "40", "50", "60", "70"]]
+    order = next((candidate for candidate in natural_orders if labels.issubset(set(candidate))), None)
+    if order:
+        shown["label"] = pd.Categorical(shown["label"].astype(str), categories=order, ordered=True)
+        shown = shown.sort_values("label", ascending=False)
+    else:
+        shown = shown.sort_values("ksi_rate")
     fig_height = max(4.0, 0.48 * len(shown) + 1.7)
     fig, ax = plt.subplots(figsize=(9, fig_height))
-    colors = [GREY if status != "observed" else RED for status in shown["status"]]
-    ax.barh(shown["label"], shown["ksi_rate"], color=colors)
+    highlight = shown["ksi_rate"].idxmax()
+    ax.barh(shown["label"], shown["ksi_rate"], color=[ACCENT if i == highlight else GREY for i in shown.index])
     xerr = np.vstack([shown["ksi_rate"] - shown["ci_low"], shown["ci_high"] - shown["ksi_rate"]])
-    ax.errorbar(shown["ksi_rate"], shown["label"], xerr=xerr, fmt="none", ecolor="#333333", capsize=2, linewidth=1)
+    ax.errorbar(shown["ksi_rate"], shown["label"], xerr=xerr, fmt="none", ecolor=DARK_GREY, capsize=2, linewidth=1)
     for row in shown.itertuples():
-        ax.text(min(row.ksi_rate + 0.006, KSI_AXIS_MAX - 0.002), row.label, f"{row.ksi_rate:.1%}  n={row.collisions:,}", va="center", ha="left", fontsize=8)
-    ax.set(title=title, xlabel="KSI share", ylabel="", xlim=(0, KSI_AXIS_MAX))
+        ax.text(min(row.ksi_rate + 0.006, KSI_AXIS_MAX - 0.002), row.label,
+                f"{row.ksi_rate:.1%}  n={row.collisions:,}", va="center", ha="left", fontsize=8)
+    ax.set(title=title, xlabel="KSI collisions (% of reported collisions)", ylabel="", xlim=(0, KSI_AXIS_MAX))
     ax.xaxis.set_major_formatter(PercentFormatter(1))
+    ax.grid(axis="y", visible=False)
     _save(fig, path, "Whiskers: 95% Wilson CI. Unknown/missing categories excluded from the conclusion chart but retained in its CSV table.")
-
 
 def cross_summary(frame: pd.DataFrame, row: str, column: str, row_labels: dict, column_labels: dict, min_n: int = 100) -> pd.DataFrame:
     '''
@@ -235,10 +285,8 @@ def cross_summary(frame: pd.DataFrame, row: str, column: str, row_labels: dict, 
     return grouped
 
 
-def plot_heatmap(summary: pd.DataFrame, path: Path, title: str) -> None:
-    '''
-    Render a cross-summary as an annotated KSI-rate and sample-size heatmap.
-    '''
+def plot_heatmap(summary: pd.DataFrame, path: Path, title: str, base_color: str = ACCENT) -> None:
+    '''Render a naturally ordered, annotated sequential heatmap.'''
     rates = summary.pivot(index="row_label", columns="column_label", values="ksi_rate")
     counts = summary.pivot(index="row_label", columns="column_label", values="collisions")
     annotations = rates.copy().astype(object)
@@ -247,48 +295,65 @@ def plot_heatmap(summary: pd.DataFrame, path: Path, title: str) -> None:
             rate, count = rates.loc[row, column], counts.loc[row, column]
             annotations.loc[row, column] = "" if pd.isna(rate) else f"{rate:.1%}\nn={int(count):,}"
     fig, ax = plt.subplots(figsize=(10, max(4.5, 0.75 * len(rates))))
-    sns.heatmap(rates, annot=annotations, fmt="", cmap="YlOrRd", vmin=0.15, vmax=0.40, linewidths=0.5, cbar_kws={"label": "KSI share"}, ax=ax)
+    cmap = sns.light_palette(base_color, as_cmap=True)
+    sns.heatmap(rates, annot=annotations, fmt="", cmap=cmap, vmin=0, vmax=KSI_AXIS_MAX,
+                linewidths=1, linecolor="white", cbar_kws={"label": "KSI collisions (% of reported collisions)"}, ax=ax)
     ax.set(title=title, xlabel="", ylabel="")
     ax.collections[0].colorbar.ax.yaxis.set_major_formatter(PercentFormatter(1))
     _save(fig, path, "Each cell shows KSI share and collision count; cells with fewer than 100 collisions are omitted.")
 
-
 def plot_spatial_hex(frame: pd.DataFrame, path: Path, table_path: Path) -> None:
-    '''
-    Map collision density and sample-filtered KSI shares into spatial hexagons.
-    '''
+    '''Overlay collision density and sample-filtered KSI share on one spatial view.'''
     geo = frame.dropna(subset=["longitude", "latitude", "ksi"])
     extent = [geo["longitude"].min(), geo["longitude"].max(), geo["latitude"].min(), geo["latitude"].max()]
-    fig, axes = plt.subplots(1, 2, figsize=(10, 8), sharex=True, sharey=True)
-    counts = axes[0].hexbin(geo["longitude"], geo["latitude"], gridsize=48, mincnt=1, bins="log", extent=extent, cmap="Blues")
-    rates = axes[1].hexbin(
+    fig = plt.figure(figsize=(9.2, 8.5))
+    grid = fig.add_gridspec(1, 2, width_ratios=[1, 0.075], wspace=0.18)
+    ax = fig.add_subplot(grid[0, 0])
+    colorbar_grid = grid[0, 1].subgridspec(2, 1, hspace=0.38)
+    count_cax = fig.add_subplot(colorbar_grid[0, 0])
+    rate_cax = fig.add_subplot(colorbar_grid[1, 0])
+    counts = ax.hexbin(
+        geo["longitude"], geo["latitude"], gridsize=48, mincnt=1, bins="log",
+        extent=extent, cmap="Greys", alpha=0.72,
+    )
+    rates = ax.hexbin(
         geo["longitude"], geo["latitude"], C=geo["ksi"],
         reduce_C_function=np.mean, gridsize=48, mincnt=SPATIAL_MIN_COLLISIONS,
-        extent=extent, cmap="YlOrRd", vmin=0.15, vmax=0.40,
+        extent=extent, alpha=0,
     )
-    axes[0].set_title("Recorded collision density")
-    axes[1].set_title(f"KSI share (minimum {SPATIAL_MIN_COLLISIONS} collisions)")
-    for ax in axes:
-        ax.set(xlabel="Longitude", ylabel="Latitude")
-        ax.set_aspect(1 / np.cos(np.deg2rad(geo["latitude"].mean())))
-    fig.colorbar(counts, ax=axes[0], fraction=0.035, pad=0.03, label="Collision count (log scale)")
-    rate_bar = fig.colorbar(rates, ax=axes[1], fraction=0.035, pad=0.03, label="KSI share")
+    rate_offsets = rates.get_offsets().copy()
+    rate_values = rates.get_array().copy()
+    rates.remove()
+    severity = ax.scatter(
+        rate_offsets[:, 0], rate_offsets[:, 1], c=rate_values,
+        cmap=sns.light_palette(HEAT_RED, as_cmap=True),
+        vmin=float(rate_values.min()), vmax=float(rate_values.max()),
+        marker="h", s=29, linewidths=0.25, edgecolors="white", alpha=0.92,
+    )
+    ax.set(
+        title="Severity hotspots do not simply follow collision density",
+        xlabel="Longitude", ylabel="Latitude",
+    )
+    ax.set_aspect(1 / np.cos(np.deg2rad(geo["latitude"].mean())))
+    count_bar = fig.colorbar(counts, cax=count_cax)
+    count_cax.set_title("Collision\ncount", fontsize=9, color=DARK_GREY, pad=8)
+    count_bar.set_label("Log scale", fontsize=8, color=DARK_GREY)
+    rate_bar = fig.colorbar(severity, cax=rate_cax)
+    rate_cax.set_title("KSI share\n(n >= 200)", fontsize=9, color=HEAT_RED, pad=8)
     rate_bar.ax.yaxis.set_major_formatter(PercentFormatter(1))
-    fig.suptitle("Reported collisions and severity form different spatial patterns", y=0.96)
     _save(
-        fig,
-        path,
-        f"Hexagons aggregate collision coordinates; KSI cells require at least {SPATIAL_MIN_COLLISIONS} collisions. "
+        fig, path,
+        f"Grey hexagons show collision density; red hexagons show KSI share where at least {SPATIAL_MIN_COLLISIONS} collisions were recorded. "
         "Results are not adjusted for traffic exposure or population.",
+        apply_tight_layout=False,
     )
 
     count_table = pd.DataFrame(counts.get_offsets(), columns=["longitude", "latitude"])
     count_table["collisions"] = counts.get_array()
-    rate_table = pd.DataFrame(rates.get_offsets(), columns=["longitude", "latitude"])
-    rate_table["ksi_rate"] = rates.get_array()
+    rate_table = pd.DataFrame(rate_offsets, columns=["longitude", "latitude"])
+    rate_table["ksi_rate"] = rate_values
     spatial = count_table.merge(rate_table, on=["longitude", "latitude"], how="left")
     spatial.to_csv(table_path, index=False)
-
 
 def create_all_figures(frame: pd.DataFrame, tables: dict[str, pd.DataFrame], figure_dir: Path, table_dir: Path) -> pd.DataFrame:
     '''
@@ -322,7 +387,11 @@ def create_all_figures(frame: pd.DataFrame, tables: dict[str, pd.DataFrame], fig
     speed_labels = {20: "20 mph", 30: "30 mph", 40: "40 mph", 50: "50 mph", 60: "60 mph", 70: "70 mph"}
     speed_area = cross_summary(frame[frame["urban_or_rural_area"].isin([1, 2])], "urban_or_rural_area", "speed_limit", area_labels, speed_labels)
     speed_area.to_csv(table_dir / "ksi_by_speed_and_area.csv", index=False)
-    plot_heatmap(speed_area, figure_dir / "17_speed_by_area_heatmap.png", "Speed-limit patterns differ substantially between urban and rural roads")
+    plot_heatmap(
+        speed_area, figure_dir / "17_speed_by_area_heatmap.png",
+        "Speed-limit patterns differ substantially between urban and rural roads",
+        base_color=HEAT_RED,
+    )
 
     periods = pd.cut(frame["hour"], bins=[-1, 5, 9, 15, 19, 23], labels=["00-05", "06-09", "10-15", "16-19", "20-23"])
     time_light_frame = frame.assign(time_period=periods)
