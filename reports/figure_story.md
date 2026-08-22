@@ -1,275 +1,202 @@
-# 英国道路碰撞严重程度：核心图表与视觉故事
+# UK Road Collision Severity: Core Figures and Visual Story
 
-> 数据来源：UK Department for Transport (DfT) road collision data, 2021-2025。  
-> 分析对象：已报告的人员伤亡道路碰撞。KSI 指死亡或重伤（Killed or Seriously Injured）。  
-> 注意：图中的 KSI 比例是“已报告碰撞中的 KSI 占比”，不是按交通流量、人口或行驶里程标准化后的道路风险。
+**English** | [简体中文](figure_story_zh-CN.md)
 
-## 故事概览
+> Data source: UK Department for Transport (DfT) road collision data, 2021–2025.
+> Population analysed: reported personal-injury road collisions. KSI means Killed or Seriously Injured.
+> Note: KSI shares in these figures are proportions among reported collisions, not road-risk measures standardised by traffic volume, population or vehicle mileage.
 
-本报告中的图表数值已与生成 CSV、保存的模型指标及 2025 年测试集重新核对。图中百分比显示到一位小数，个别合计可能受四舍五入影响。
+## Story overview
 
-本项目研究哪些时间、道路、环境和空间条件与更严重的碰撞结果有关，以及机器学习能否利用碰撞发生时已知的信息识别较高的 KSI 风险。核心故事是：事故数量多的情境不一定最严重；严重程度与时间、照明、速度、城乡环境和空间位置有关；模型能识别多数 KSI 碰撞，但会产生较多误报，因此更适合作为风险筛查工具。
-
----
-
-## 1. KSI 是少数但重要的碰撞结果
-
-![碰撞严重程度构成](figures/processed/01_severity_composition.png)
-
-### 这张图做了什么
-
-用百分比堆叠条形图展示死亡、重伤和轻伤碰撞的构成，并直接标注占比及样本量。
-
-### 代表什么
-
-五年共记录 513,801 宗碰撞：轻伤 389,435 宗（75.8%）、重伤 116,813 宗（22.7%）、死亡 7,553 宗（1.5%）。死亡与重伤合计 124,366 宗，即 KSI 占 24.2%。
-
-### 可能的意义
-
-- 这是明显的类别不平衡问题，模型评估不能只依赖总体准确率。
-- KSI 虽不是多数类别，却是道路安全决策最需要优先识别的结果。
-- 后续应重点使用 Average Precision、KSI 召回率和混淆矩阵。
-
-### 解读边界
-
-该图描述碰撞结果构成，不代表普通出行发生碰撞或遭遇 KSI 的概率。
+This project examines which temporal, road, environmental and spatial conditions are associated with more severe collision outcomes, and whether machine learning can use information known at collision time to identify higher KSI risk. The central story is that contexts with more collisions are not necessarily the most severe; severity varies with time, lighting, speed, urban–rural context and location; and the model identifies most KSI collisions at the selected threshold but also produces many false positives.
 
 ---
 
-## 2. 碰撞总量稳定，但记录方式发生显著变化
+## 1. KSI is a minority but consequential collision outcome
 
-![年度碰撞量与记录方法趋势](figures/processed/02_annual_reporting_sensitivity.png)
+![Collision severity composition](figures/processed/01_severity_composition.png)
 
-### 这张图做了什么
+### What the figure shows
 
-在同一时间轴上用柱形表示年度碰撞量，用橙色折线表示基于伤情的严重程度记录方法占比；最高碰撞量年度使用低饱和蓝色强调并直接标注数值，其余柱形保持灰色。
+A percentage stacked bar presents the composition of fatal, serious and slight collisions, with direct labels for shares and sample sizes.
 
-### 代表什么
+### What it represents
 
-年度碰撞量介于 100,927 至 106,004 宗，最高为 2022 年的 106,004 宗，五年间波动较小。基于伤情的记录方式则从 2021 年的 49.6% 上升至 2025 年的 86.5%，累计增加 36.9 个百分点；仅 2024 至 2025 年就增加约 27.8 个百分点。
+Across five years, 513,801 collisions were recorded: 389,435 slight collisions (75.8%), 116,813 serious collisions (22.7%) and 7,553 fatal collisions (1.5%). Fatal and serious collisions total 124,366, giving a KSI share of 24.2%.
 
-### 可能的意义
+### Interpretation boundary
 
-- 碰撞记录数量稳定不代表道路安全状况没有变化。
-- 严重程度记录方法的结构变化会影响跨年度结论。
-- 这种变化可能造成目标变量的时间分布漂移，影响模型训练与测试的一致性。
-
-### 解读边界
-
-该图展示记录方法而非道路风险，不能据此判断道路变得更安全或更危险。
+The figure describes the distribution of outcomes among reported collisions. It does not represent the probability that an ordinary journey results in a collision or a KSI outcome.
 
 ---
 
-## 3. 事故数量高峰与严重程度高峰并不重合
+## 2. Collision volume is stable, but recording practice changes substantially
 
-![小时碰撞量与 KSI 占比](figures/processed/03_hourly_volume_and_ksi.png)
+![Annual collision volume and recording-method trend](figures/processed/02_annual_reporting_sensitivity.png)
 
-### 这张图做了什么
+### What the figure shows
 
-在同一时间轴上用柱形显示每小时碰撞数量，用蓝色折线显示 KSI 占比及其 95% Wilson 置信区间。
+Bars show annual collision volume on a shared time axis, while the orange line shows the share recorded using injury-based severity reporting. The year with the highest collision volume is highlighted in muted blue and labelled directly; the remaining bars are grey.
 
-### 代表什么
+### What it represents
 
-碰撞数量在 17:00 达到最高的 44,792 宗，但该小时 KSI 占比约为 23.1%。KSI 占比在 00:00 最高，为 30.9%；08:00 最低，为 19.4%。两者相差 11.5 个百分点，午夜的 KSI 占比约为早上 8 时的 1.59 倍。
+Annual collision volume ranges from 100,927 to 106,004, peaking at 106,004 in 2022 and varying relatively little across the five years. Injury-based reporting rises from 49.6% in 2021 to 86.5% in 2025, an increase of 36.9 percentage points. The increase from 2024 to 2025 alone is approximately 27.8 percentage points.
 
-### 可能的意义
+### Interpretation boundary
 
-- “碰撞发生频率”和“碰撞后果严重程度”是两个不同的问题。
-- 夜间速度、疲劳、酒精、低交通密度或救援条件可能参与形成差异。
-- 安全资源配置不应只依据事故数量，还应考虑高严重程度时段。
-
-### 解读边界
-
-数据没有按各小时交通流量或行驶里程标准化，不能解释为个体出行风险，也不能证明具体致因。
+The line describes recording practice rather than road risk. It cannot establish that roads became safer or more dangerous over the period.
 
 ---
 
-## 4. 缺乏道路照明的黑暗环境对应更高 KSI 占比
+## 3. The peaks in collision volume and severity do not coincide
 
-![不同照明条件下的 KSI 占比](figures/processed/06_ksi_by_light.png)
+![Hourly collision volume and KSI share](figures/processed/03_hourly_volume_and_ksi.png)
 
-### 这张图做了什么
+### What the figure shows
 
-比较不同照明条件下的 KSI 占比、碰撞数量和 95% Wilson 置信区间，并突出比例最高的类别。
+Bars show the number of reported collisions by hour, while the blue line shows KSI share with a 95% Wilson confidence interval on the same time axis.
 
-### 代表什么
+### What it represents
 
-没有道路照明的黑暗环境中，KSI 占比为 34.9%（n=27,438），日间为 23.2%（n=368,193），相差 11.8 个百分点；前者约为后者的 1.51 倍。照明正常的黑暗环境为 25.1%，介于两者之间。
+Collision volume peaks at 17:00 with 44,792 collisions, when the KSI share is approximately 23.1%. KSI share is highest at 00:00, at 30.9%, and lowest at 08:00, at 19.4%. The difference is 11.5 percentage points, and the midnight KSI share is approximately 1.59 times the 08:00 share.
 
-### 可能的意义
+### Interpretation boundary
 
-- 夜间可见度和道路照明可能是严重后果的重要背景因素。
-- 结果支持优先检查缺乏照明且严重碰撞集中的道路区段。
-- 照明条件可作为模型识别高严重程度情境的辅助特征。
-
-### 解读边界
-
-这是未经其他变量调整的关联。无照明道路往往也位于农村或高速度区域，不能把差异全部归因于照明。
+The data is not standardised by hourly traffic flow or vehicle mileage. The figure therefore does not measure individual travel risk or establish specific causes.
 
 ---
 
-## 5. 速度限制的意义取决于城乡环境
+## 4. Unlit darkness corresponds to a higher KSI share
 
-![速度限制与城乡环境交互热力图](figures/processed/17_speed_by_area_heatmap.png)
+![KSI share by lighting condition](figures/processed/06_ksi_by_light.png)
 
-### 这张图做了什么
+### What the figure shows
 
-使用红色顺序热力图比较城乡环境与速度限制组合下的 KSI 占比，每个单元格直接给出比例和碰撞数量。
+The chart compares KSI share, collision count and 95% Wilson confidence intervals across lighting conditions, highlighting the category with the highest share.
 
-### 代表什么
+### What it represents
 
-农村 60 mph 道路的 KSI 占比最高，为 34.8%（n=60,693）；城市 60 mph 为 25.0%（n=2,000），城乡相差 9.8 个百分点。50 mph 的城乡差距同样明显，农村比城市高 9.9 个百分点。六个速度组中农村均高于城市，但差距从 1.9 至 9.9 个百分点不等；70 mph 并不是 KSI 占比最高的组别。
+KSI accounts for 34.9% of collisions in darkness with no road lighting (n=27,438), compared with 23.2% in daylight (n=368,193), a difference of 11.8 percentage points. The former is approximately 1.51 times the latter. Darkness with street lights lit has a KSI share of 25.1%, between the two.
 
-### 可能的意义
+### Interpretation boundary
 
-- 速度限制不能脱离道路环境单独解释。
-- 农村高速度道路可能同时具有弯道、单车道、路侧障碍或较远救援距离。
-- 交互关系说明模型需要同时考虑多个变量，而不是只依赖速度。
-- 简单单变量汇总可能隐藏混杂和分组差异。
-
-### 解读边界
-
-图中是碰撞发生后的 KSI 比例，并非不同道路的每公里事故风险，也不能证明较高限速造成全部差异。
+This is an unadjusted association. Unlit roads are also more likely to be rural or in higher-speed environments, so the entire difference cannot be attributed to lighting.
 
 ---
 
-## 6. 碰撞密集地区与严重程度热点并不相同
+## 5. The pattern associated with speed limits depends on urban–rural context
 
-![碰撞密度与空间 KSI 模式](figures/processed/19_spatial_hex_analysis.png)
+![Speed-limit and urban–rural interaction heatmap](figures/processed/17_speed_by_area_heatmap.png)
 
-### 这张图做了什么
+### What the figure shows
 
-将碰撞坐标聚合到同一幅六边形空间图中：灰色深浅表示碰撞数量密度，红色六边形表示达到至少 200 条碰撞样本门槛的网格 KSI 占比。
+A red sequential heatmap compares KSI shares across combinations of urban–rural context and speed limit. Every cell directly labels the share and collision count.
 
-### 代表什么
+### What it represents
 
-达到 200 宗碰撞门槛的网格共有 403 个，其 KSI 占比约为 13.6%至 52.6%。在这些网格中，碰撞数量与 KSI 占比的 Spearman 相关系数约为 -0.41，说明碰撞更密集的网格并不倾向于同时具有更高的严重程度比例。
+Rural 60 mph roads have the highest KSI share, at 34.8% (n=60,693), compared with 25.0% on urban 60 mph roads (n=2,000), a difference of 9.8 percentage points. The urban–rural gap at 50 mph is similarly pronounced, with the rural share 9.9 percentage points higher. Rural KSI shares exceed urban shares in all six displayed speed groups, although the gaps range from 1.9 to 9.9 percentage points. The 70 mph group does not have the highest KSI share.
 
-### 可能的意义
+### Interpretation boundary
 
-- 道路安全干预可区分“减少碰撞数量”和“减少严重后果”两类目标。
-- 空间位置及其代表的道路网络、速度环境和地区特征具有预测信息。
-- 把数量和比例叠加能避免把人口密集区域自动解释为更危险地区。
-
-### 解读边界
-
-这不是交通暴露风险地图，也没有控制人口、道路长度和交通流量。空白或无红色覆盖的区域不代表没有风险。
+The cells show KSI share after a collision has occurred, not collision risk per road kilometre. They also do not establish that higher speed limits cause the full observed difference.
 
 ---
 
-## 7. 车辆数量、速度和道路环境提供最多预测信息
+## 6. Collision-density hotspots differ from severity hotspots
 
-![测试年度排列重要性](figures/model/permutation_importance.png)
+![Collision density and spatial KSI pattern](figures/processed/19_spatial_hex_analysis.png)
 
-### 这张图做了什么
+### What the figure shows
 
-通过 permutation importance 测量随机打乱各特征后模型 Average Precision 的下降，并显示重复估计的不确定性；贡献最大的特征同时直接标注具体数值。
+Collision coordinates are aggregated in one hexagonal spatial view. Grey intensity represents collision-count density, while red hexagons represent KSI share in cells meeting a minimum threshold of 200 collisions.
 
-### 代表什么
+### What it represents
 
-涉及车辆数量贡献最大，打乱后 Average Precision 平均下降 0.0297（标准差 0.0017），约为第二位速度限制 0.0102 的 2.9 倍。纬度为 0.0091，但误差条较宽；道路类型为 0.0086，估计相对稳定。
+A total of 403 cells meet the 200-collision threshold, with KSI shares ranging from approximately 13.6% to 52.6%. Across these cells, the Spearman correlation between collision count and KSI share is approximately -0.41, indicating that denser collision cells do not tend to have higher severity shares at the same time.
 
-### 可能的意义
+### Interpretation boundary
 
-- 严重程度是碰撞结构、道路环境和空间背景共同作用的结果。
-- 模型重要特征与描述性分析中的速度、道路类型和空间差异相呼应。
-- 车辆数量的重要性提示多车碰撞结构可能包含关键严重程度信息。
-
-### 解读边界
-
-排列重要性表示对当前模型预测的贡献，不等于因果影响；相关特征也可能分担彼此的重要性。
+This is not a traffic-exposure risk map and does not control for population, road length or traffic volume. Blank areas or areas without red overlays do not indicate an absence of risk.
 
 ---
 
-## 8. 模型优于基准，但识别能力仍然有限
+## 7. Vehicle count, speed and road context provide the most predictive information
 
-![精确率-召回率曲线](figures/model/precision_recall_curve.png)
+![Held-out-year permutation importance](figures/model/permutation_importance.png)
 
-### 这张图做了什么
+### What the figure shows
 
-展示测试年度不同阈值下 KSI 精确率与召回率的权衡，并以 KSI prevalence 作为无技巧基准。
+Permutation importance measures the decrease in model Average Precision after each feature is randomly shuffled. Error bars show uncertainty across repeated estimates, and the largest importance value is labelled directly.
 
-### 代表什么
+### What it represents
 
-模型 Average Precision 为 0.382，高于 0.262 的 KSI 基准比例 0.120，约为基准的 1.46 倍。这说明模型确实能把较多 KSI 碰撞排到预测序列前部，但曲线在追求高召回率时快速接近基准，整体区分能力仍然有限。
+Number of vehicles contributes the largest importance: shuffling it reduces Average Precision by 0.0297 on average (standard deviation 0.0017), approximately 2.9 times the second-ranked speed limit value of 0.0102. Longitude has an importance of 0.0091 with a wider error bar, while road type has an importance of 0.0086 with a comparatively stable estimate.
 
-### 可能的意义
+### Interpretation boundary
 
-- 模型具有实际信号，而不是随机排序。
-- 在类别不平衡场景中，PR 曲线比准确率更能反映 KSI 识别价值。
-- 阈值应根据漏报 KSI 和产生误报的实际代价选择。
-
-### 解读边界
-
-Average Precision 不能解释成预测正确率；该结果只反映当前时间切分和特征集合下的泛化表现。
+Permutation importance measures contribution to predictions from the current model, not causal influence. Correlated features may also divide importance between them.
 
 ---
 
-## 9. 模型偏重召回，但会产生大量误报
+## 8. The model exceeds the baseline, but discrimination remains limited
 
-![测试年度混淆矩阵](figures/model/confusion_matrix.png)
+![Precision–recall curve](figures/model/precision_recall_curve.png)
 
-### 这张图做了什么
+### What the figure shows
 
-使用紫色顺序色板展示验证集所选 0.45 阈值下，测试年度实际类别与预测类别的数量和行内比例。
+The precision–recall curve shows the trade-off between KSI precision and recall across thresholds in the held-out test year. KSI prevalence provides the no-skill baseline.
 
-### 代表什么
+### What it represents
 
-模型正确识别 19,280 条 KSI 碰撞，漏掉 7,364 条，因此 KSI 召回率为 72.4%、漏报率为 27.6%。模型共发出 59,505 个 KSI 警报，其中 40,225 个是误报，所以精确率为 32.4%；同时，53.7%的实际轻伤碰撞被标为 KSI。
+The model achieves an Average Precision of 0.382, which is 0.120 above the KSI prevalence baseline of 0.262 and approximately 1.46 times that baseline. The model ranks more KSI collisions toward the front of the prediction order, but the curve approaches the baseline quickly when high recall is required, indicating limited overall discrimination.
 
-### 可能的意义
+### Interpretation boundary
 
-- 模型能够捕获多数严重碰撞。
-- 大量误报意味着模型不适合直接作出确定性判断。
-- 更合理的用途是风险筛查、人工复核优先级或资源初步排序。
-
-### 解读边界
-
-混淆矩阵依赖具体阈值。改变阈值会同时改变召回率、精确率和误报数量。
+Average Precision is not prediction accuracy. The result describes generalisation under the current temporal split and feature set.
 
 ---
 
-## 10. 风险概率仍需校准检查
+## 9. The selected threshold favours recall but produces many false positives
 
-![测试年度校准曲线](figures/model/calibration_curve.png)
+![Held-out-year confusion matrix](figures/model/confusion_matrix.png)
 
-### 这张图做了什么
+### What the figure shows
 
-将测试样本按预测风险划分为十个等量组，比较平均预测 KSI 概率和实际 KSI 占比；对角线表示完美校准。
+A purple sequential heatmap presents counts and within-row shares for actual and predicted classes in the test year, using the threshold of 0.45 selected on the validation year.
 
-### 代表什么
+### What it represents
 
-十个风险组全部位于理想校准线下方，说明模型在 2025 测试集中系统性高估 KSI 概率。最大绝对差距为 26.6 个百分点；最高预测风险组的平均预测概率为 71.2%，实际 KSI 占比为 45.5%。模型仍能按风险高低排序，但其概率数值不能直接按字面解释。
+The model correctly identifies 19,280 KSI collisions and misses 7,364, giving a KSI recall of 72.4% and a false-negative rate of 27.6%. It produces 59,505 KSI alerts, of which 40,225 are false positives, giving a precision of 32.4%. At the same threshold, 53.7% of actual slight collisions are classified as KSI.
 
-### 可能的意义
+### Interpretation boundary
 
-- 如果模型用于优先级排序，区分能力可能比概率绝对准确性更重要。
-- 如果输出要解释为“发生 KSI 的概率”，应进一步校准并在新年度数据上验证。
-- 一个模型可以具有一定区分能力，但概率仍不够准确。
-
-### 解读边界
-
-校准曲线受分组方法和样本分布影响，十组结果只是诊断摘要。
+The confusion matrix depends on the chosen threshold. Changing the threshold changes recall, precision and the number of false positives simultaneously.
 
 ---
 
-## 综合结论
+## 10. Predicted risk probabilities remain miscalibrated
 
-1. KSI 是少数但后果严重的目标，需要专门的评价方法。
-2. 记录制度随时间明显变化，跨年度结论必须谨慎。
-3. 碰撞数量与严重程度在时间和空间上并不重合。
-4. 黑暗、速度、城乡环境、道路结构和空间背景与严重程度存在关联。
-5. LightGBM 能提取多维信号，但预测能力仍属中等。
-6. 当前模型更适合作为偏重召回的风险筛查工具，而不是自动事故判定系统。
+![Held-out-year calibration curve](figures/model/calibration_curve.png)
 
-## 面向道路安全实践的可能启示
+### What the figure shows
 
-- 同时建立碰撞数量热点和 KSI 比例热点清单。
-- 优先复核农村 50-60 mph、缺少照明以及夜间严重碰撞集中的道路环境。
-- 将模型用于辅助排序和调查线索，而不是代替专家判断。
-- 在部署前补充交通流量、道路长度、人口和车辆行驶里程等暴露数据。
-- 持续监测记录制度与数据分布变化，并在新年度重新评估模型和概率校准。
+The test records are divided into ten equal-sized groups by predicted risk. The chart compares each group's mean predicted KSI probability with its observed KSI share; the diagonal represents perfect calibration.
 
-## 课程展示建议
+### What it represents
 
-每页围绕一个结论展开，不要堆叠多张无关图。演讲备注应说明图表选择、视觉编码、数据限制和设计理由。ROC 曲线、其他类别比较图和完整统计表可作为备选页或附录，避免主故事被重复图表削弱。
+All ten risk groups fall below the ideal calibration line, showing that the model systematically overestimates KSI probabilities in the 2025 test data. The largest absolute gap is 26.6 percentage points. In the highest predicted-risk group, the mean predicted probability is 71.2%, while the observed KSI share is 45.5%. The model retains ranking information, but its probability values should not be interpreted literally.
+
+### Interpretation boundary
+
+The calibration curve depends on the grouping method and sample distribution. The ten-group result is a diagnostic summary.
+
+---
+
+## Overall conclusions
+
+1. KSI is a minority but consequential target that requires class-sensitive evaluation metrics.
+2. Severity-recording practice changes substantially across the period, affecting cross-year interpretation.
+3. Collision volume and severity do not coincide consistently across time or space.
+4. Darkness, speed, urban–rural context, road structure and spatial context are associated with collision severity.
+5. LightGBM extracts multidimensional predictive signal, but its discrimination remains moderate.
+6. At the selected threshold, the model is recall-oriented rather than a high-precision collision classifier.

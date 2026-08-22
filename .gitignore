@@ -7,6 +7,21 @@ models/*
 !models/.gitkeep
 reports/figures/*
 !reports/figures/.gitkeep
+# Keep the figures embedded by reports/figure_story.md under version control.
+!reports/figures/processed/
+reports/figures/processed/*
+!reports/figures/processed/01_severity_composition.png
+!reports/figures/processed/02_annual_reporting_sensitivity.png
+!reports/figures/processed/03_hourly_volume_and_ksi.png
+!reports/figures/processed/06_ksi_by_light.png
+!reports/figures/processed/17_speed_by_area_heatmap.png
+!reports/figures/processed/19_spatial_hex_analysis.png
+!reports/figures/model/
+reports/figures/model/*
+!reports/figures/model/permutation_importance.png
+!reports/figures/model/precision_recall_curve.png
+!reports/figures/model/confusion_matrix.png
+!reports/figures/model/calibration_curve.png
 reports/tables/*
 !reports/tables/.gitkeep
 
