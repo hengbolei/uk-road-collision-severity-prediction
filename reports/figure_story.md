@@ -8,9 +8,11 @@
 
 ## Story overview
 
-This project examines which temporal, road, environmental and spatial conditions are associated with more severe collision outcomes, and whether machine learning can use information known at collision time to identify higher KSI risk. The central story is that contexts with more collisions are not necessarily the most severe; severity varies with time, lighting, speed, urban–rural context and location; and the model identifies most KSI collisions at the selected threshold but also produces many false positives.
+This project examines which temporal, road, environmental and spatial conditions are associated with more severe collision outcomes, and whether machine learning can use information known at collision time to identify higher KSI risk. The story progresses from description to prediction: reported collision volume broadly stabilises while the smoothed KSI share rises; road and environmental variables are interrelated rather than acting in isolation; additional historical data narrows the model's generalisation gap; and the final model identifies most KSI collisions at the selected threshold but still produces many false positives and overestimates absolute risk.
 
 ---
+
+## Part I - From reported collisions to severity patterns
 
 ## 1. KSI is a minority but consequential collision outcome
 
@@ -48,7 +50,25 @@ The line describes recording practice rather than road risk. It cannot establish
 
 ---
 
-## 3. The peaks in collision volume and severity do not coincide
+## 3. Monthly collision volume stabilises while the KSI share rises
+
+![Monthly collision volume and KSI trend](figures/processed/20_monthly_time_series.png)
+
+### What the figure shows
+
+The upper panel shows monthly reported collision volume, while the lower panel shows monthly KSI share with a 95% Wilson confidence interval. Both panels include 12-month smoothers.
+
+### What it represents
+
+After the low levels at the start of 2021, monthly collision volume broadly stabilises. In contrast, the pooled 12-month KSI share rises from approximately 21.9% in mid-2021 to 26.2% at the end of 2025, an increase of about 4.4 percentage points. Collision frequency and severity therefore do not follow the same temporal pattern.
+
+### Interpretation boundary
+
+The figure is not standardised by traffic volume or vehicle mileage, and cross-year comparisons are affected by changes in severity-recording practice. It cannot be interpreted directly as an increase in road risk.
+
+---
+
+## 4. The peaks in collision volume and severity do not coincide
 
 ![Hourly collision volume and KSI share](figures/processed/03_hourly_volume_and_ksi.png)
 
@@ -66,7 +86,7 @@ The data is not standardised by hourly traffic flow or vehicle mileage. The figu
 
 ---
 
-## 4. Unlit darkness corresponds to a higher KSI share
+## 5. Unlit darkness corresponds to a higher KSI share
 
 ![KSI share by lighting condition](figures/processed/06_ksi_by_light.png)
 
@@ -84,7 +104,25 @@ This is an unadjusted association. Unlit roads are also more likely to be rural 
 
 ---
 
-## 5. The pattern associated with speed limits depends on urban–rural context
+## 6. Road-context variables are related, but no single factor dominates KSI
+
+![Mixed association heatmap for core variables](figures/processed/21_mixed_association_heatmap.png)
+
+### What the figure shows
+
+The simplified matrix retains nine core variables and uses absolute Spearman correlation, Cramer's V or correlation ratio eta according to variable type.
+
+### What it represents
+
+The strongest feature-to-feature association is between speed limit and urban-rural context (0.68), followed by weather and road surface (0.48), and speed limit and road type (0.35). Every univariate association with KSI is below 0.10, suggesting that severe outcomes reflect combinations of road, environmental and vehicle conditions rather than one isolated factor.
+
+### Interpretation boundary
+
+The cells do not all use the same association statistic. Values communicate strength rather than direction and do not establish causal effects.
+
+---
+
+## 7. The pattern associated with speed limits depends on urban-rural context
 
 ![Speed-limit and urban–rural interaction heatmap](figures/processed/17_speed_by_area_heatmap.png)
 
@@ -102,7 +140,7 @@ The cells show KSI share after a collision has occurred, not collision risk per 
 
 ---
 
-## 6. Collision-density hotspots differ from severity hotspots
+## 8. Collision-density hotspots differ from severity hotspots
 
 ![Collision density and spatial KSI pattern](figures/processed/19_spatial_hex_analysis.png)
 
@@ -120,7 +158,45 @@ This is not a traffic-exposure risk map and does not control for population, roa
 
 ---
 
-## 7. Vehicle count, speed and road context provide the most predictive information
+## Part II - From model design to held-out evaluation
+
+## 9. LightGBM narrowly leads CatBoost, while tree ensembles dominate
+
+![Validation model comparison](figures/model/model_validation_comparison.png)
+
+### What the figure shows
+
+Dummy, logistic regression, ExtraTrees, CatBoost and LightGBM are compared on the same historical training set and 2024 validation set using Average Precision and Brier score. Ranking uses validation Average Precision only.
+
+### What it represents
+
+LightGBM achieves validation Average Precision of 0.3798, narrowly ahead of CatBoost at 0.3792; the difference is only 0.0006. ExtraTrees reaches 0.3670 and logistic regression 0.3244, both above the 0.2484 no-skill baseline. CatBoost and ExtraTrees have Brier scores of 0.2296 and 0.2242, below LightGBM's 0.2311. The Dummy model's lower Brier score reflects prevalence prediction rather than useful ranking. LightGBM is therefore retained under the primary ranking metric.
+
+### Interpretation boundary
+
+Brier score combines discrimination and calibration and should not select a ranking model by itself. LightGBM and CatBoost are effectively very close here, so this result does not establish that LightGBM will win in every future year.
+
+---
+
+## 10. More historical data narrows the generalisation gap, but gains slow
+
+![Chronological learning curve](figures/model/temporal_learning_curve.png)
+
+### What the figure shows
+
+The curve expands the 2021-2023 training data chronologically while keeping 2024 as a fixed future validation year.
+
+### What it represents
+
+Training Average Precision falls from 0.482 to 0.406 as the sample becomes more representative, while validation Average Precision rises from 0.364 to 0.379. The gap narrows throughout, and every validation result remains above the 0.248 KSI prevalence baseline. Additional history improves future-year ranking, although the final increments are small and indicate an approaching plateau.
+
+### Interpretation boundary
+
+The curve describes one fixed model configuration and one future validation year. It supports a generalisation diagnosis but does not guarantee that every additional dataset would produce the same gain.
+
+---
+
+## 11. Vehicle count, speed and road context provide the most predictive information
 
 ![Held-out-year permutation importance](figures/model/permutation_importance.png)
 
@@ -130,7 +206,7 @@ Permutation importance measures the decrease in model Average Precision after ea
 
 ### What it represents
 
-Number of vehicles contributes the largest importance: shuffling it reduces Average Precision by 0.0297 on average (standard deviation 0.0017), approximately 2.9 times the second-ranked speed limit value of 0.0102. Longitude has an importance of 0.0091 with a wider error bar, while road type has an importance of 0.0086 with a comparatively stable estimate.
+Number of vehicles contributes the largest importance: shuffling it reduces Average Precision by 0.0292 on average (standard deviation 0.0019), approximately 2.9 times the second-ranked speed limit value of 0.0102. Road type has an importance of 0.0086, while latitude reaches 0.0082 with a wider error bar.
 
 ### Interpretation boundary
 
@@ -138,7 +214,7 @@ Permutation importance measures contribution to predictions from the current mod
 
 ---
 
-## 8. The model exceeds the baseline, but discrimination remains limited
+## 12. The model exceeds the baseline, but discrimination remains limited
 
 ![Precision–recall curve](figures/model/precision_recall_curve.png)
 
@@ -156,17 +232,17 @@ Average Precision is not prediction accuracy. The result describes generalisatio
 
 ---
 
-## 9. The selected threshold favours recall but produces many false positives
+## 13. The selected threshold favours recall but produces many false positives
 
 ![Held-out-year confusion matrix](figures/model/confusion_matrix.png)
 
 ### What the figure shows
 
-A purple sequential heatmap presents counts and within-row shares for actual and predicted classes in the test year, using the threshold of 0.45 selected on the validation year.
+A purple sequential heatmap presents counts and within-row shares for actual and predicted classes in the test year, using the threshold of 0.46 selected on the validation year.
 
 ### What it represents
 
-The model correctly identifies 19,280 KSI collisions and misses 7,364, giving a KSI recall of 72.4% and a false-negative rate of 27.6%. It produces 59,505 KSI alerts, of which 40,225 are false positives, giving a precision of 32.4%. At the same threshold, 53.7% of actual slight collisions are classified as KSI.
+The model correctly identifies 18,662 KSI collisions and misses 7,982, giving a KSI recall of 70.0% and a false-negative rate of 30.0%. It produces 56,889 KSI alerts, of which 38,227 are false positives, giving a precision of 32.8%. At the same threshold, 51.1% of actual slight collisions are classified as KSI.
 
 ### Interpretation boundary
 
@@ -174,7 +250,7 @@ The confusion matrix depends on the chosen threshold. Changing the threshold cha
 
 ---
 
-## 10. Predicted risk probabilities remain miscalibrated
+## 14. Predicted risk probabilities remain miscalibrated
 
 ![Held-out-year calibration curve](figures/model/calibration_curve.png)
 
@@ -184,7 +260,7 @@ The test records are divided into ten equal-sized groups by predicted risk. The 
 
 ### What it represents
 
-All ten risk groups fall below the ideal calibration line, showing that the model systematically overestimates KSI probabilities in the 2025 test data. The largest absolute gap is 26.6 percentage points. In the highest predicted-risk group, the mean predicted probability is 71.2%, while the observed KSI share is 45.5%. The model retains ranking information, but its probability values should not be interpreted literally.
+All ten risk groups fall below the ideal calibration line, showing that the model systematically overestimates KSI probabilities in the 2025 test data. The largest absolute gap is 26.6 percentage points. In the highest predicted-risk group, the mean predicted probability is 71.3%, while the observed KSI share is 45.6%. The model retains ranking information, but its probability values should not be interpreted literally.
 
 ### Interpretation boundary
 
@@ -192,11 +268,25 @@ The calibration curve depends on the grouping method and sample distribution. Th
 
 ---
 
-## Overall conclusions
+## Supplementary model diagnostics: ranking curves and training cost
+
+![Validation precision-recall comparison](figures/model/model_precision_recall_comparison.png)
+
+The five validation curves confirm that LightGBM and CatBoost remain very close across most recall levels. ExtraTrees ranks next, while logistic regression and the Dummy baseline are substantially weaker. This chart compares risk ranking and is not used to choose the final classification threshold.
+
+![Model performance and training-time trade-off](figures/model/model_performance_time_tradeoff.png)
+
+LightGBM reaches the highest validation AP in approximately 5.9 seconds, compared with about 90.0 seconds for a near-identical CatBoost result. ExtraTrees takes approximately 28.6 seconds and achieves lower AP. Training time depends on hardware and runtime conditions, so these values support relative comparison within this experiment only.
+
+---
+
+## Part III - Overall conclusions
 
 1. KSI is a minority but consequential target that requires class-sensitive evaluation metrics.
 2. Severity-recording practice changes substantially across the period, affecting cross-year interpretation.
-3. Collision volume and severity do not coincide consistently across time or space.
-4. Darkness, speed, urban–rural context, road structure and spatial context are associated with collision severity.
-5. LightGBM extracts multidimensional predictive signal, but its discrimination remains moderate.
-6. At the selected threshold, the model is recall-oriented rather than a high-precision collision classifier.
+3. Monthly collision volume broadly stabilises while the smoothed KSI share rises, so frequency and severity trends do not coincide.
+4. Speed, urban-rural context, road type and lighting are interrelated; no single factor dominates the KSI outcome.
+5. Darkness, speed, urban-rural context, road structure and spatial context are associated with collision severity.
+6. Additional historical data narrows the gap between training and future-year validation, but performance gains slow.
+7. Tree ensembles outperform the linear baseline; LightGBM and CatBoost are very close, with LightGBM narrowly ahead on this validation year.
+8. At the selected threshold, the model is recall-oriented rather than a high-precision collision classifier.

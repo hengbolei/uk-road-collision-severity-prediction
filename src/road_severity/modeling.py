@@ -12,10 +12,13 @@ import json
 from pathlib import Path
 
 import joblib
+from catboost import CatBoostClassifier
 from lightgbm import LGBMClassifier
 import numpy as np
 import pandas as pd
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.inspection import permutation_importance
 from sklearn.dummy import DummyClassifier
@@ -28,6 +31,60 @@ from sklearn.metrics import (
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OrdinalEncoder
 from sklearn.model_selection import ParameterSampler
+
+
+CODED_CATEGORICAL_FEATURES = {
+    'police_force', 'day_of_week', 'local_authority_district',
+    'local_authority_ons_district', 'local_authority_highway',
+    'local_authority_highway_current', 'first_road_class', 'first_road_number',
+    'road_type', 'junction_control', 'second_road_class', 'second_road_number',
+    'light_conditions', 'weather_conditions', 'road_surface_conditions',
+    'special_conditions_at_site', 'urban_or_rural_area', 'trunk_road_flag',
+    'junction_detail_unified', 'pedestrian_crossing_unified',
+    'carriageway_hazards_unified',
+}
+
+
+def feature_groups(features: pd.DataFrame) -> tuple[list[str], list[str]]:
+    '''Separate continuous measurements from coded or textual categories.'''
+    categorical = [
+        column for column in features
+        if column in CODED_CATEGORICAL_FEATURES
+        or not pd.api.types.is_numeric_dtype(features[column])
+    ]
+    numeric = [column for column in features if column not in categorical]
+    return numeric, categorical
+
+
+class CatBoostPreprocessor(BaseEstimator, TransformerMixin):
+    '''Preserve a DataFrame while making missing values valid for CatBoost.'''
+
+    def __init__(self, categorical_columns: list[str]):
+        self.categorical_columns = categorical_columns
+
+    def fit(self, X: pd.DataFrame, y=None):
+        self.feature_names_in_ = list(X.columns)
+        self.numeric_columns_ = [
+            column for column in self.feature_names_in_
+            if column not in self.categorical_columns
+        ]
+        self.numeric_medians_ = {
+            column: pd.to_numeric(X[column], errors='coerce').median()
+            for column in self.numeric_columns_
+        }
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        transformed = X[self.feature_names_in_].copy()
+        for column in self.categorical_columns:
+            transformed[column] = (
+                transformed[column].astype('string').fillna('__MISSING__').astype(str)
+            )
+        for column in self.numeric_columns_:
+            transformed[column] = pd.to_numeric(
+                transformed[column], errors='coerce'
+            ).fillna(self.numeric_medians_[column])
+        return transformed
 
 
 def temporal_split(frame: pd.DataFrame, validation_year: int, test_year: int):
@@ -48,6 +105,25 @@ def make_pipeline(features: pd.DataFrame, random_state: int, settings: dict, mod
     '''
     numeric = features.select_dtypes(include="number").columns.tolist()
     categorical = [c for c in features.columns if c not in numeric]
+    numeric, categorical = feature_groups(features)
+    if model_kind == 'catboost':
+        estimator = CatBoostClassifier(
+            loss_function='Logloss',
+            iterations=settings.get('catboost_iterations', settings.get('max_iter', 250)),
+            depth=settings.get('catboost_depth', 7),
+            learning_rate=settings.get('catboost_learning_rate', 0.08),
+            l2_leaf_reg=settings.get('l2_regularization', 3.0),
+            auto_class_weights='Balanced',
+            cat_features=categorical,
+            random_seed=random_state,
+            thread_count=-1,
+            verbose=False,
+            allow_writing_files=False,
+        )
+        return Pipeline([
+            ('preprocess', CatBoostPreprocessor(categorical)),
+            ('model', estimator),
+        ])
     preprocessing = ColumnTransformer(
         [
             ("numeric", Pipeline([("impute", SimpleImputer(strategy="median"))]), numeric),
@@ -59,6 +135,20 @@ def make_pipeline(features: pd.DataFrame, random_state: int, settings: dict, mod
         ],
         sparse_threshold=0,
     )
+    if model_kind == 'extra_trees':
+        estimator = ExtraTreesClassifier(
+            n_estimators=settings.get('extra_trees_estimators', 300),
+            max_depth=settings.get('extra_trees_max_depth', 18),
+            min_samples_leaf=settings.get('extra_trees_min_samples_leaf', 5),
+            max_features='sqrt',
+            class_weight='balanced',
+            random_state=random_state,
+            n_jobs=-1,
+        )
+        return Pipeline([
+            ('preprocess', preprocessing),
+            ('model', estimator),
+        ])
     if model_kind == "dummy":
         estimator = DummyClassifier(strategy="prior", random_state=random_state)
     elif model_kind == "logistic_regression":
