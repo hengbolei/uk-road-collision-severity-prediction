@@ -268,6 +268,26 @@ The calibration curve depends on the grouping method and sample distribution. Th
 
 ---
 
+## 15. Model inputs and predicted risk stay stable as the model is deployed to 2025
+
+![Input-feature drift between training and deployment](figures/processed/24_feature_distribution_drift.png)
+
+![Predicted-risk distribution drift](figures/model/predicted_risk_drift.png)
+
+### What the figure shows
+
+The first chart ranks fifteen model inputs by the Population Stability Index (PSI) between the pooled 2021-2023 training inputs and the 2025 deployment inputs, colouring each bar by drift severity (PSI below 0.1 is stable, 0.1-0.25 moderate, 0.25 and above significant). The second chart overlays the predicted KSI probability distributions for the 2024 validation and 2025 test years, with each year's observed KSI share marked by a dashed line and its Average Precision and Brier score annotated.
+
+### What it represents
+
+All fifteen inspected inputs stay below the stable-drift threshold (PSI below 0.1): the largest shift is junction_detail_unified at 0.008, followed by road_type (0.005) and weather_conditions (0.004), with no input reaching even moderate drift. Predicted-risk distributions nearly overlap across deployment years (mean predicted probability 0.479 in 2024 vs 0.483 in 2025) even as observed KSI prevalence rises from 24.8% in 2024 to 26.2% in 2025. Average Precision is 0.3798 on 2024 and 0.3819 on 2025, and Brier score moves from 0.2311 to 0.2349, so the model's ranking and probability error stay stable even as the observed KSI share changes and the model faces an out-of-distribution year value in 2025.
+
+### Interpretation boundary
+
+PSI describes how much the distribution of recorded inputs changed between periods, not why it changed or what caused it; missing values are excluded and rare categories are pooled. Stable inputs do not prove the model will remain stable for any future year. The model was itself trained with collision_year as an available input, so the year is not among the inspected drift features. The second chart describes one fixed LightGBM configuration refit on 2021-2023; a different model or training window could behave differently.
+
+---
+
 ## Supplementary model diagnostics: ranking curves and training cost
 
 ![Validation precision-recall comparison](figures/model/model_precision_recall_comparison.png)

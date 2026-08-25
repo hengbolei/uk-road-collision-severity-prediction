@@ -92,6 +92,7 @@ python scripts/02_processed_analysis_and_visualisation.py
 python scripts/tune_lightgbm.py
 python scripts/03_model_training_and_visualisation.py
 python scripts/04_additional_visual_analysis.py
+python scripts/05_temporal_drift_analysis.py
 python -m pytest -q
 ```
 
