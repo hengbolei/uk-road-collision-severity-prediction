@@ -16,12 +16,14 @@ reports/figures/processed/*
 !reports/figures/processed/06_ksi_by_light.png
 !reports/figures/processed/17_speed_by_area_heatmap.png
 !reports/figures/processed/19_spatial_hex_analysis.png
+!reports/figures/processed/24_feature_distribution_drift.png
 !reports/figures/model/
 reports/figures/model/*
 !reports/figures/model/permutation_importance.png
 !reports/figures/model/precision_recall_curve.png
 !reports/figures/model/confusion_matrix.png
 !reports/figures/model/calibration_curve.png
+!reports/figures/model/predicted_risk_drift.png
 reports/tables/*
 !reports/tables/.gitkeep
 
