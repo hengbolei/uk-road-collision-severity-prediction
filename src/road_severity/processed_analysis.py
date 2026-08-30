@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import matplotlib.colors as mcolors
+import matplotlib.patheffects as patheffects
 import matplotlib.pyplot as plt
 from matplotlib.ticker import LinearLocator, PercentFormatter
 import numpy as np
@@ -285,7 +286,13 @@ def cross_summary(frame: pd.DataFrame, row: str, column: str, row_labels: dict, 
     return grouped
 
 
-def plot_heatmap(summary: pd.DataFrame, path: Path, title: str, base_color: str = ACCENT) -> None:
+def plot_heatmap(
+    summary: pd.DataFrame,
+    path: Path,
+    title: str,
+    base_color: str = ACCENT,
+    high_contrast: bool = False,
+) -> None:
     '''Render a naturally ordered, annotated sequential heatmap.'''
     rates = summary.pivot(index="row_label", columns="column_label", values="ksi_rate")
     counts = summary.pivot(index="row_label", columns="column_label", values="collisions")
@@ -295,57 +302,88 @@ def plot_heatmap(summary: pd.DataFrame, path: Path, title: str, base_color: str 
             rate, count = rates.loc[row, column], counts.loc[row, column]
             annotations.loc[row, column] = "" if pd.isna(rate) else f"{rate:.1%}\nn={int(count):,}"
     fig, ax = plt.subplots(figsize=(10, max(4.5, 0.75 * len(rates))))
-    cmap = sns.light_palette(base_color, as_cmap=True)
-    sns.heatmap(rates, annot=annotations, fmt="", cmap=cmap, vmin=0, vmax=KSI_AXIS_MAX,
-                linewidths=1, linecolor="white", cbar_kws={"label": "KSI collisions (% of reported collisions)"}, ax=ax)
+    if high_contrast:
+        cmap = mcolors.LinearSegmentedColormap.from_list(
+            "ksi_orange_red",
+            ["#FFF4E6", "#FDD49E", "#FDBB6C", "#F07C45", "#C94C3C", "#7F1D1D"],
+            N=256,
+        )
+        sns.heatmap(
+            rates, annot=annotations, fmt="", cmap=cmap, vmin=0, vmax=KSI_AXIS_MAX,
+            linewidths=2, linecolor="white",
+            cbar_kws={"label": "KSI collisions (% of reported collisions)"}, ax=ax,
+        )
+    else:
+        cmap = sns.light_palette(base_color, as_cmap=True)
+        sns.heatmap(
+            rates, annot=annotations, fmt="", cmap=cmap, vmin=0, vmax=KSI_AXIS_MAX,
+            linewidths=1, linecolor="white",
+            cbar_kws={"label": "KSI collisions (% of reported collisions)"}, ax=ax,
+        )
+    if high_contrast:
+        for text in ax.texts:
+            text.set_color("white")
+            text.set_path_effects(
+                [patheffects.withStroke(linewidth=1.5, foreground="#6B2E25")]
+            )
     ax.set(title=title, xlabel="", ylabel="")
     ax.collections[0].colorbar.ax.yaxis.set_major_formatter(PercentFormatter(1))
     _save(fig, path, "Each cell shows KSI share and collision count; cells with fewer than 100 collisions are omitted.")
 
 def plot_spatial_hex(frame: pd.DataFrame, path: Path, table_path: Path) -> None:
-    '''Overlay collision density and sample-filtered KSI share on one spatial view.'''
+    '''Compare collision density and sample-filtered KSI share in aligned panels.'''
     geo = frame.dropna(subset=["longitude", "latitude", "ksi"])
     extent = [geo["longitude"].min(), geo["longitude"].max(), geo["latitude"].min(), geo["latitude"].max()]
-    fig = plt.figure(figsize=(9.2, 8.5))
-    grid = fig.add_gridspec(1, 2, width_ratios=[1, 0.075], wspace=0.18)
-    ax = fig.add_subplot(grid[0, 0])
-    colorbar_grid = grid[0, 1].subgridspec(2, 1, hspace=0.38)
-    count_cax = fig.add_subplot(colorbar_grid[0, 0])
-    rate_cax = fig.add_subplot(colorbar_grid[1, 0])
-    counts = ax.hexbin(
-        geo["longitude"], geo["latitude"], gridsize=48, mincnt=1, bins="log",
-        extent=extent, cmap="Greys", alpha=0.72,
+    fig, (count_ax, rate_ax) = plt.subplots(
+        1, 2, figsize=(12, 7.2), sharex=True, sharey=True
     )
-    rates = ax.hexbin(
+    counts = count_ax.hexbin(
+        geo["longitude"], geo["latitude"], gridsize=48, mincnt=1, bins="log",
+        extent=extent, cmap="Greys", linewidths=0.15, edgecolors="white",
+    )
+    rate_cmap = mcolors.LinearSegmentedColormap.from_list(
+        "ksi_spatial_red", ["#F7E4E1", "#D98B83", "#B5524B", "#762521"], N=256
+    )
+    rates = rate_ax.hexbin(
         geo["longitude"], geo["latitude"], C=geo["ksi"],
         reduce_C_function=np.mean, gridsize=48, mincnt=SPATIAL_MIN_COLLISIONS,
-        extent=extent, alpha=0,
+        extent=extent, cmap=rate_cmap, linewidths=0.25, edgecolors="white",
     )
     rate_offsets = rates.get_offsets().copy()
     rate_values = rates.get_array().copy()
-    rates.remove()
-    severity = ax.scatter(
-        rate_offsets[:, 0], rate_offsets[:, 1], c=rate_values,
-        cmap=sns.light_palette(HEAT_RED, as_cmap=True),
-        vmin=float(rate_values.min()), vmax=float(rate_values.max()),
-        marker="h", s=29, linewidths=0.25, edgecolors="white", alpha=0.92,
+    fig.suptitle(
+        "Collision density and severity hotspots show different spatial patterns",
+        fontsize=14,
     )
-    ax.set(
-        title="Severity hotspots do not simply follow collision density",
-        xlabel="Longitude", ylabel="Latitude",
+    count_ax.set(title="Collision density", xlabel="Longitude", ylabel="Latitude")
+    rate_ax.set(
+        title=f"KSI share (hexagons with n >= {SPATIAL_MIN_COLLISIONS})",
+        xlabel="Longitude",
+        ylabel="",
     )
-    ax.set_aspect(1 / np.cos(np.deg2rad(geo["latitude"].mean())))
-    count_bar = fig.colorbar(counts, cax=count_cax)
-    count_cax.set_title("Collision\ncount", fontsize=9, color=DARK_GREY, pad=8)
-    count_bar.set_label("Log scale", fontsize=8, color=DARK_GREY)
-    rate_bar = fig.colorbar(severity, cax=rate_cax)
-    rate_cax.set_title("KSI share\n(n >= 200)", fontsize=9, color=HEAT_RED, pad=8)
-    rate_bar.ax.yaxis.set_major_formatter(PercentFormatter(1))
+    map_aspect = 1 / np.cos(np.deg2rad(geo["latitude"].mean()))
+    for axis in (count_ax, rate_ax):
+        axis.set_aspect(map_aspect)
+        axis.set_xlim(extent[0], extent[1])
+        axis.set_ylim(extent[2], extent[3])
+    count_bar = fig.colorbar(
+        counts, ax=count_ax, orientation="horizontal", pad=0.08,
+        fraction=0.045, aspect=30,
+    )
+    count_bar.set_label("Collision count (log scale)", color=DARK_GREY)
+    rate_bar = fig.colorbar(
+        rates, ax=rate_ax, orientation="horizontal", pad=0.08,
+        fraction=0.045, aspect=30,
+    )
+    rate_bar.set_label(
+        f"KSI collisions (% of reported collisions; n >= {SPATIAL_MIN_COLLISIONS})",
+        color=DARK_GREY,
+    )
+    rate_bar.ax.xaxis.set_major_formatter(PercentFormatter(1))
     _save(
         fig, path,
-        f"Grey hexagons show collision density; red hexagons show KSI share where at least {SPATIAL_MIN_COLLISIONS} collisions were recorded. "
+        f"Panels use the same extent and hexagon grid; KSI share is shown only where at least {SPATIAL_MIN_COLLISIONS} collisions were recorded. "
         "Results are not adjusted for traffic exposure or population.",
-        apply_tight_layout=False,
     )
 
     count_table = pd.DataFrame(counts.get_offsets(), columns=["longitude", "latitude"])
@@ -391,6 +429,7 @@ def create_all_figures(frame: pd.DataFrame, tables: dict[str, pd.DataFrame], fig
         speed_area, figure_dir / "17_speed_by_area_heatmap.png",
         "Speed-limit patterns differ substantially between urban and rural roads",
         base_color=HEAT_RED,
+        high_contrast=True,
     )
 
     periods = pd.cut(frame["hour"], bins=[-1, 5, 9, 15, 19, 23], labels=["00-05", "06-09", "10-15", "16-19", "20-23"])
