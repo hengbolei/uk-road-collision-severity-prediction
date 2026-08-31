@@ -56,6 +56,7 @@ def create_model_comparison_figures(
     y_valid: pd.Series,
     probability_map: dict,
     out_dir: str | Path,
+    ranking_only: bool = False,
 ) -> None:
     '''Generate ranking, PR-curve, and performance/time comparisons.'''
     out_dir = Path(out_dir)
@@ -65,30 +66,34 @@ def create_model_comparison_figures(
 
     ordered = comparison.sort_values('average_precision').copy()
     ordered['label'] = ordered['model'].map(LABELS)
-    fig, axes = plt.subplots(1, 2, figsize=(11, 5.4))
-    axes[0].barh(
+    fig, ax = plt.subplots(figsize=(10.5, 5.8))
+    runner_up = comparison.sort_values('average_precision', ascending=False).iloc[1]['model']
+    highlight_colors = {best: ACCENT, runner_up: '#79A9BD'}
+    ax.barh(
         ordered['label'], ordered['average_precision'],
-        color=[COLORS[name] if name == best else GREY for name in ordered['model']],
+        color=[highlight_colors.get(name, GREY) for name in ordered['model']],
+        height=0.64,
     )
     for y_pos, value in enumerate(ordered['average_precision']):
-        axes[0].text(value + 0.004, y_pos, f'{value:.3f}', va='center', fontsize=9)
-    axes[0].set(title='Ranking quality: higher is better',
-                xlabel='Validation average precision', ylabel='')
-    axes[0].xaxis.set_major_formatter(PercentFormatter(1))
-
-    calibrated = comparison.sort_values('brier_score', ascending=False).copy()
-    calibrated['label'] = calibrated['model'].map(LABELS)
-    axes[1].barh(
-        calibrated['label'], calibrated['brier_score'],
-        color=[COLORS[name] if name == best else GREY for name in calibrated['model']],
+        ax.text(value + 0.004, y_pos, f'{value:.4f}', va='center', fontsize=11,
+                color=DARK_GREY)
+    best_row = comparison.loc[comparison['model'] == best].iloc[0]
+    runner_up_row = comparison.loc[comparison['model'] == runner_up].iloc[0]
+    gap = best_row['average_precision'] - runner_up_row['average_precision']
+    speedup = runner_up_row['training_seconds'] / best_row['training_seconds']
+    ax.set(
+        title=(
+            f'{LABELS[best]} and {LABELS[runner_up]} are effectively tied on validation ranking\n'
+            f'AP gap {gap:.4f}; {LABELS[best]} trained {speedup:.1f}x faster'
+        ),
+        xlabel='Validation average precision (higher is better)', ylabel='',
+        xlim=(0, max(ordered['average_precision']) * 1.18),
     )
-    for y_pos, value in enumerate(calibrated['brier_score']):
-        axes[1].text(value + 0.002, y_pos, f'{value:.3f}', va='center', fontsize=9)
-    axes[1].set(title='Probability error: lower is better',
-                xlabel='Validation Brier score', ylabel='')
-    axes[1].xaxis.set_major_formatter(PercentFormatter(1))
-    fig.suptitle(f'{LABELS[best]} provides the strongest validation ranking', fontsize=14)
+    ax.xaxis.set_major_formatter(PercentFormatter(1))
+    ax.grid(axis='y', visible=False)
     _save(fig, out_dir / 'model_validation_comparison.png')
+    if ranking_only:
+        return
 
     fig, ax = plt.subplots(figsize=(7.4, 5.6))
     for model_name in comparison.sort_values('average_precision')['model']:

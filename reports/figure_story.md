@@ -6,6 +6,8 @@
 > Population analysed: reported personal-injury road collisions. KSI means Killed or Seriously Injured.
 > Note: KSI shares in these figures are proportions among reported collisions, not road-risk measures standardised by traffic volume, population or vehicle mileage.
 
+Data provenance, model rankings and held-out metrics are available in the tracked [result snapshot](results_snapshot.json). All figures embedded below are version controlled and viewable without regenerating the analysis.
+
 ## Story overview
 
 This project examines which temporal, road, environmental and spatial conditions are associated with more severe collision outcomes, and whether machine learning can use information known at collision time to identify higher KSI risk. The story progresses from description to prediction: reported collision volume broadly stabilises while the smoothed KSI share rises; road and environmental variables are interrelated rather than acting in isolation; additional historical data narrows the model's generalisation gap; and the final model identifies most KSI collisions at the selected threshold but still produces many false positives and overestimates absolute risk.

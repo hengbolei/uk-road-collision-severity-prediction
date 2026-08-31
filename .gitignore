@@ -1,6 +1,6 @@
 # Source data and reproducible generated artefacts
 data/raw/*
-!data/raw/.gitkeep
+!data/raw/README.md
 data/processed/*
 !data/processed/.gitkeep
 models/*
@@ -16,6 +16,8 @@ reports/figures/processed/*
 !reports/figures/processed/06_ksi_by_light.png
 !reports/figures/processed/17_speed_by_area_heatmap.png
 !reports/figures/processed/19_spatial_hex_analysis.png
+!reports/figures/processed/20_monthly_time_series.png
+!reports/figures/processed/21_mixed_association_heatmap.png
 !reports/figures/processed/24_feature_distribution_drift.png
 !reports/figures/model/
 reports/figures/model/*
@@ -23,6 +25,10 @@ reports/figures/model/*
 !reports/figures/model/precision_recall_curve.png
 !reports/figures/model/confusion_matrix.png
 !reports/figures/model/calibration_curve.png
+!reports/figures/model/model_validation_comparison.png
+!reports/figures/model/temporal_learning_curve.png
+!reports/figures/model/model_precision_recall_comparison.png
+!reports/figures/model/model_performance_time_tradeoff.png
 !reports/figures/model/predicted_risk_drift.png
 reports/tables/*
 !reports/tables/.gitkeep
@@ -48,12 +54,6 @@ Thumbs.db
 tmp/
 *.log
 
-# Presentation outputs and personal details
-deliverables/*.pptx
-deliverables/*.pdf
+# Local secrets and review artefacts
 .env
-
-# Course-provided reference materials (kept locally, not versioned)
-CA6002 Assignment Brief*.pdf
-CA6002 Assignment_Group no - Template*.pptx
-CODEX_README.md
+.codex-review/

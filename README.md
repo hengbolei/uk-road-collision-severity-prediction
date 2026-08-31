@@ -19,6 +19,8 @@ KSI means **Killed or Seriously Injured**. Fatal and serious collisions are enco
 
 The data covers reported personal-injury road collisions from 2021–2025 and is published through the UK government's [Road safety open data](https://www.gov.uk/government/statistical-data-sets/road-safety-open-data).
 
+The tracked [result snapshot](reports/results_snapshot.json) records the exact source SHA-256, row count, data contract, temporal split, model ranking and held-out metrics used by this documentation.
+
 Outcome-derived fields, collision identifiers, exact location identifiers, casualty counts and police-attendance information are excluded from model features. Coded fields such as road type, lighting, weather and local authority are treated as categorical attributes; CatBoost receives these attributes through its native categorical-feature interface.
 
 ## Analysis and evaluation design
@@ -84,7 +86,13 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-Place the source CSV at the path specified in `configs/default.yaml`, then run:
+Download the official DfT five-year collision extract:
+
+```powershell
+python scripts/download_data.py
+```
+
+The downloader writes the file to the path in `configs/default.yaml`, records its SHA-256 and does not replace an existing file unless `--force` is supplied. Then run:
 
 ```powershell
 python scripts/01_raw_analysis_and_processing.py
@@ -93,10 +101,13 @@ python scripts/tune_lightgbm.py
 python scripts/03_model_training_and_visualisation.py
 python scripts/04_additional_visual_analysis.py
 python scripts/05_temporal_drift_analysis.py
+python scripts/build_results_snapshot.py
 python -m pytest -q
 ```
 
-Generated models, tables and non-core figures are ignored by Git. The training script writes the comparison table to `reports/tables/model_comparison_validation.csv`, model diagnostics to `reports/figures/model/`, and the selected pipeline and test metrics to `models/test/`.
+Generated models, detailed tables and non-report figures are ignored by Git. Every figure embedded in the figure narrative is tracked, along with `reports/results_snapshot.json`. The training script writes the comparison table to `reports/tables/model_comparison_validation.csv`, model diagnostics to `reports/figures/model/`, and the selected pipeline and test metrics to `models/test/`.
+
+After rebuilding data or models, rerun `scripts/build_results_snapshot.py` so the documented provenance and metrics stay synchronised with the generated artefacts.
 
 ## Interpretation boundaries
 
@@ -104,6 +115,8 @@ The data contains reported collisions rather than traffic exposure. KSI shares d
 
 ## Reports and notebooks
 
+- [Tracked result snapshot](reports/results_snapshot.json)
+- [Raw-data download notes](data/raw/README.md)
 - [English figure narrative](reports/figure_story.md)
 - [中文核心图表报告](reports/figure_story_zh-CN.md)
 - [English analysis notebook](notebooks/uk_road_collision_analysis.ipynb)
