@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "snapshot_generated_at_utc": "2026-08-31T15:14:02.327952+00:00",
+  "project": "uk-road-collision-severity-prediction",
+  "data": {
+    "source_file": "data/raw/dft-road-casualty-statistics-collision-last-5-years.csv",
+    "source_sha256": "8ce3f1290ea4830c041ddd737b543fb06b8667215208a101b4432005386072ec",
+    "source_size_bytes": 97669586,
+    "processed_at_utc": "2026-08-19T13:40:43.624639+00:00",
+    "rows": 513801,
+    "date_range": [
+      "2021-01-01",
+      "2025-12-31"
+    ],
+    "ksi_share": 0.242050910761,
+    "contract_version": "dft_open_dataset_2025"
+  },
+  "evaluation_protocol": {
+    "training_years": [
+      2021,
+      2022,
+      2023
+    ],
+    "validation_year": 2024,
+    "test_year": 2025,
+    "target": "binary_ksi",
+    "selection_metric": "average_precision",
+    "threshold_selection": "maximum_ksi_f1_on_validation_year",
+    "random_state": 42
+  },
+  "tuning": {
+    "validation_scheme": "expanding_year",
+    "iterations": 20,
+    "best_mean_average_precision": 0.3709264445977775,
+    "parameters": {
+      "max_iter": 400,
+      "learning_rate": 0.03,
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "max_depth": 6,
+      "l1_regularization": 1.0,
+      "l2_regularization": 5.0,
+      "feature_fraction": 1.0,
+      "bagging_fraction": 0.85
+    }
+  },
+  "validation": {
+    "models": [
+      {
+        "rank": 1,
+        "model": "lightgbm",
+        "roc_auc": 0.6558084284911149,
+        "average_precision": 0.3797837173836007,
+        "brier_score": 0.2310781232816671,
+        "training_seconds": 5.937357499991776
+      },
+      {
+        "rank": 2,
+        "model": "catboost",
+        "roc_auc": 0.6556507540467016,
+        "average_precision": 0.3791930702865762,
+        "brier_score": 0.2296147981038782,
+        "training_seconds": 90.04898769999272
+      },
+      {
+        "rank": 3,
+        "model": "extra_trees",
+        "roc_auc": 0.6442891988645757,
+        "average_precision": 0.366960569443162,
+        "brier_score": 0.2242098187441739,
+        "training_seconds": 28.599893699982204
+      },
+      {
+        "rank": 4,
+        "model": "logistic_regression",
+        "roc_auc": 0.5894344591079482,
+        "average_precision": 0.3244023405334504,
+        "brier_score": 0.2430532083467061,
+        "training_seconds": 7.006906399998115
+      },
+      {
+        "rank": 5,
+        "model": "dummy",
+        "roc_auc": 0.5,
+        "average_precision": 0.2483874483537606,
+        "brier_score": 0.1869172766384973,
+        "training_seconds": 2.5111889999825507
+      }
+    ]
+  },
+  "test": {
+    "selected_model": "lightgbm",
+    "threshold": 0.46,
+    "roc_auc": 0.6393121559008843,
+    "average_precision": 0.38190503162521294,
+    "brier_score": 0.23493769560184044,
+    "prevalence": 0.2624378231962571,
+    "balanced_accuracy": 0.5949585126751711,
+    "ksi_precision": 0.328042328042328,
+    "ksi_recall": 0.7004203573037081,
+    "ksi_f1": 0.44681742544862507,
+    "confusion_matrix": {
+      "tn": 36654,
+      "fp": 38227,
+      "fn": 7982,
+      "tp": 18662
+    }
+  },
+  "permutation_importance": {
+    "scoring": "average_precision",
+    "top_features": [
+      {
+        "feature": "number_of_vehicles",
+        "importance_mean": 0.029232397802192,
+        "importance_std": 0.0019272615514252
+      },
+      {
+        "feature": "speed_limit",
+        "importance_mean": 0.0102304473470737,
+        "importance_std": 0.001704147928983
+      },
+      {
+        "feature": "road_type",
+        "importance_mean": 0.0086155493603183,
+        "importance_std": 0.0007492455669612
+      },
+      {
+        "feature": "latitude",
+        "importance_mean": 0.0082367201234245,
+        "importance_std": 0.0039883831784068
+      },
+      {
+        "feature": "local_authority_highway_current",
+        "importance_mean": 0.0075614547396776,
+        "importance_std": 0.0019973141035982
+      },
+      {
+        "feature": "urban_or_rural_area",
+        "importance_mean": 0.0043068431037953,
+        "importance_std": 0.0014976689817744
+      },
+      {
+        "feature": "police_force",
+        "importance_mean": 0.0040013984785126,
+        "importance_std": 0.0006521368207658
+      },
+      {
+        "feature": "junction_control",
+        "importance_mean": 0.0024874524862674,
+        "importance_std": 0.0009446849069155
+      },
+      {
+        "feature": "location_easting_osgr",
+        "importance_mean": 0.0024828597103726,
+        "importance_std": 0.000963973855662
+      },
+      {
+        "feature": "junction_detail_unified",
+        "importance_mean": 0.0023997129118329,
+        "importance_std": 0.0005354478340214
+      },
+      {
+        "feature": "light_conditions",
+        "importance_mean": 0.0023544693043208,
+        "importance_std": 0.000880571546174
+      },
+      {
+        "feature": "hour_cos",
+        "importance_mean": 0.0019678272696913,
+        "importance_std": 0.0006180863399931
+      },
+      {
+        "feature": "day_of_week",
+        "importance_mean": 0.001906795232152,
+        "importance_std": 0.0009744281042856
+      },
+      {
+        "feature": "first_road_number",
+        "importance_mean": 0.0018427835983758,
+        "importance_std": 0.0009800440897699
+      },
+      {
+        "feature": "longitude",
+        "importance_mean": 0.0017994638006087,
+        "importance_std": 0.0008262479538998
+      }
+    ]
+  },
+  "source_artifacts": {
+    "processing_metadata": "data/processed/processing_metadata.json",
+    "model_comparison": "reports/tables/model_comparison_validation.csv",
+    "test_metrics": "models/test/metrics.json",
+    "permutation_importance": "models/test/permutation_importance.csv",
+    "lightgbm_parameters": "configs/lightgbm_best_params.yaml"
+  }
+}

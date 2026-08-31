@@ -19,6 +19,8 @@ KSI 指 **Killed or Seriously Injured（死亡或重伤）**。死亡和重伤�
 
 数据覆盖 2021—2025 年已报告的人员伤亡道路碰撞，来源为英国政府发布的 [Road safety open data](https://www.gov.uk/government/statistical-data-sets/road-safety-open-data)。
 
+受版本控制的[结果快照](reports/results_snapshot.json)记录了本文档所用数据的 SHA-256、记录数、数据契约、时间切分、模型排名和独立测试指标。
+
 模型排除了伤情结果衍生字段、碰撞标识符、精确位置标识符、伤亡人数和警员是否到场等字段。道路类型、照明、天气、地方行政区等编码字段按类别属性处理；CatBoost 通过原生类别特征接口接收这些字段。
 
 ## 分析与评估设计
@@ -84,7 +86,13 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-将原始 CSV 放在 `configs/default.yaml` 指定的位置，然后运行：
+下载英国交通部官方五年碰撞数据：
+
+```powershell
+python scripts/download_data.py
+```
+
+下载器会将文件保存到 `configs/default.yaml` 指定的位置并记录 SHA-256；除非提供 `--force`，否则不会覆盖已有文件。随后运行：
 
 ```powershell
 python scripts/01_raw_analysis_and_processing.py
@@ -92,10 +100,13 @@ python scripts/02_processed_analysis_and_visualisation.py
 python scripts/tune_lightgbm.py
 python scripts/03_model_training_and_visualisation.py
 python scripts/04_additional_visual_analysis.py
+python scripts/build_results_snapshot.py
 python -m pytest -q
 ```
 
-生成的模型、表格和非核心图表由 Git 忽略。训练脚本将模型对照表保存到 `reports/tables/model_comparison_validation.csv`，模型图保存到 `reports/figures/model/`，入选管线和测试指标保存到 `models/test/`。
+生成的模型、详细表格和未用于报告的图表由 Git 忽略。图表报告中嵌入的全部图片以及 `reports/results_snapshot.json` 均纳入版本控制。训练脚本将模型对照表保存到 `reports/tables/model_comparison_validation.csv`，模型图保存到 `reports/figures/model/`，入选管线和测试指标保存到 `models/test/`。
+
+重新处理数据或训练模型后，应再次运行 `scripts/build_results_snapshot.py`，确保文档中的数据溯源和指标与生成产物保持同步。
 
 ## 解读边界
 
@@ -103,6 +114,8 @@ python -m pytest -q
 
 ## 报告与 Notebook
 
+- [受版本控制的结果快照](reports/results_snapshot.json)
+- [原始数据下载说明](data/raw/README.md)
 - [英文核心图表报告](reports/figure_story.md)
 - [中文核心图表报告](reports/figure_story_zh-CN.md)
 - [英文分析 Notebook](notebooks/uk_road_collision_analysis.ipynb)

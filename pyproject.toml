@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "uk-road-collision-severity-prediction"
 version = "0.1.0"
-description = "Reproducible CA6002 analysis of UK road collision severity"
+description = "Reproducible analysis and temporal modeling of UK road collision severity"
 requires-python = ">=3.11"
 
 [tool.pytest.ini_options]
