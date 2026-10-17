@@ -1,6 +1,7 @@
 # 英国道路碰撞严重程度预测
 
 [![CI](https://github.com/hengbolei/uk-road-collision-severity-prediction/actions/workflows/ci.yml/badge.svg)](https://github.com/hengbolei/uk-road-collision-severity-prediction/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 [English](README.md) | **简体中文**
 
 ## 项目概述
