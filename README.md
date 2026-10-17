@@ -1,5 +1,7 @@
 # UK Road Collision Severity Prediction
 
+[![CI](https://github.com/hengbolei/uk-road-collision-severity-prediction/actions/workflows/ci.yml/badge.svg)](https://github.com/hengbolei/uk-road-collision-severity-prediction/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **English** | [简体中文](README.zh-CN.md)
 
 ## Project overview
@@ -121,3 +123,7 @@ The data contains reported collisions rather than traffic exposure. KSI shares d
 - [中文核心图表报告](reports/figure_story_zh-CN.md)
 - [English analysis notebook](notebooks/uk_road_collision_analysis.ipynb)
 - [中文分析 Notebook](notebooks/uk_road_collision_analysis_zh.ipynb)
+
+## License
+
+Code is released under the [MIT License](LICENSE). The source data is published by the UK Department for Transport under its own terms and is not redistributed here.
