@@ -1,5 +1,6 @@
 # 英国道路碰撞严重程度预测
 
+[![CI](https://github.com/hengbolei/uk-road-collision-severity-prediction/actions/workflows/ci.yml/badge.svg)](https://github.com/hengbolei/uk-road-collision-severity-prediction/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [English](README.md) | **简体中文**
 
 ## 项目概述
@@ -121,3 +122,7 @@ python -m pytest -q
 - [中文核心图表报告](reports/figure_story_zh-CN.md)
 - [英文分析 Notebook](notebooks/uk_road_collision_analysis.ipynb)
 - [中文分析 Notebook](notebooks/uk_road_collision_analysis_zh.ipynb)
+
+## 许可证
+
+代码以 [MIT 许可证](LICENSE) 发布。原始数据由英国交通部（DfT）按其自身条款发布，本仓库不重新分发。
